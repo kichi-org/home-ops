@@ -1,5 +1,5 @@
 ---
-clusterName: talos-cluster
+clusterName: kubernetes
 
 talosVersion: "${talosVersion}"
 kubernetesVersion: "${kubernetesVersion}"
@@ -32,7 +32,8 @@ nodes:
         addresses:
           - "172.16.0.101/24"
         routes:
-          - gateway: "172.16.0.1"
+          - network: "0.0.0.0/0"
+            gateway: "172.16.0.1"
         mtu: 1500
         vip:
           ip: "172.16.0.10"
@@ -50,7 +51,8 @@ nodes:
         addresses:
           - "172.16.0.102/24"
         routes:
-          - gateway: "172.16.0.1"
+          - network: "0.0.0.0/0"
+            gateway: "172.16.0.1"
         mtu: 1500
         vip:
           ip: "172.16.0.10"
@@ -68,13 +70,15 @@ nodes:
         addresses:
           - "172.16.0.103/24"
         routes:
-          - gateway: "172.16.0.1"
+          - network: "0.0.0.0/0"
+            gateway: "172.16.0.1"
         mtu: 1500
         vip:
           ip: "172.16.0.10"
 
 # Global patches
 patches:
+  - "@./patches/global/machine-features.yaml"
   - "@./patches/global/machine-files.yaml"
   - "@./patches/global/machine-kubelet.yaml"
   - "@./patches/global/machine-network.yaml"
