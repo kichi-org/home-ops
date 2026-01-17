@@ -22,7 +22,7 @@ spec:
         - notification-controller
       sync:
         kind: GitRepository
-        url: "ssh://git@github.com/kichi-org/home-ops.git"
+        url: "https://github.com/kichi-org/home-ops.git"
         # pullSecret: github-deploy-key
         ref: "refs/heads/main"
         path: kubernetes/flux/cluster
