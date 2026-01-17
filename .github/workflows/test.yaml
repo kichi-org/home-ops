@@ -1,0 +1,19 @@
+
+name: Test
+on:
+  workflow_dispatch:
+
+jobs:
+  Organize:
+    runs-on: kichi-org-runner
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
+        with:
+          enable-cache: false
+
+      - name: Execute echo
+        run: echo "This is working !"
