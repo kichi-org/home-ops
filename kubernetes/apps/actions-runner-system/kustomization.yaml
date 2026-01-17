@@ -7,6 +7,6 @@ namespace: actions-runner-system
 components:
   - ../../components/alerts
 
-resources:
-  - ./namespace.yaml
-  - ./actions-runner-controller/ks.yaml
+# resources:
+#   - ./namespace.yaml
+#   - ./actions-runner-controller/ks.yaml
