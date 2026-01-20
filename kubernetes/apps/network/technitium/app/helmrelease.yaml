@@ -55,8 +55,8 @@ spec:
       dns:
         type: LoadBalancer
         annotations:
-          lbipam.cilium.io/ips: 172.16.0.200
-        externalTrafficPolicy: Local
+          lbipam.cilium.io/ips: "172.16.0.200"
+        externalTrafficPolicy: Cluster
         ports:
           dns-tcp:
             enabled: true
