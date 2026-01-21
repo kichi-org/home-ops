@@ -12,6 +12,9 @@ spec:
       namespace: longhorn-system
   interval: 1h
   path: ./kubernetes/apps/media/plex/app
+  postBuild:
+    substitute:
+      APP: plex
   prune: true
   sourceRef:
     kind: GitRepository
