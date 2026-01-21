@@ -21,7 +21,7 @@ spec:
               tag: 1.42.2.10156@sha256:9ad8a3506e1d8ebda873a668603c1a2c10e6887969564561be669efd65ae8871
             env:
               TZ: Asia/Kuala_Lumpur
-              PLEX_ADVERTISE_URL: https://plex.kichi.live:443,http://172.16.0.128:32400,http://plex.default.svc.cluster.local:32400
+              PLEX_ADVERTISE_URL: https://plex.kichi.live:443,http://172.16.0.128:32400,http://plex.media.svc.cluster.local:32400
               PLEX_NO_AUTH_NETWORKS: 192.168.85.0/24
             probes:
               liveness: &probes
@@ -89,13 +89,12 @@ spec:
     persistence:
       config:
         # existingClaim: "{{ .Release.Name }}"
+        type: persistentVolumeClaim
         storageClass: longhorn
         accessMode: ReadWriteOnce
         size: 5Gi
-        advancedMounts:
-        plex:
-          app:
-            - path: /config
+        globalMounts:
+          - path: /config
       media:
         type: nfs
         server: kl-san-1.localdomain
