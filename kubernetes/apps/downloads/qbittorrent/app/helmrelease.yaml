@@ -92,13 +92,7 @@ spec:
             addr = "http://localhost:80"
     persistence:
       config:
-        # existingClaim: "{{ .Release.Name }}"
-        type: persistentVolumeClaim
-        storageClass: longhorn
-        accessMode: ReadWriteOnce
-        size: 1Gi
-        globalMounts:
-          - path: /config
+        existingClaim: "{{ .Release.Name }}"
       config-file:
         type: configMap
         identifier: config
