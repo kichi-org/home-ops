@@ -99,12 +99,12 @@ spec:
         size: 1Gi
         globalMounts:
           - path: /config
-      # config-file:
-      #   type: configMap
-      #   identifier: config
-      #   globalMounts:
-      #     - path: /config/.qbt.toml
-      #       subPath: .qbt.toml
+      config-file:
+        type: configMap
+        identifier: config
+        globalMounts:
+          - path: /config/.qbt.toml
+            subPath: .qbt.toml
       media:
         type: nfs
         server: kl-san-1.localdomain
