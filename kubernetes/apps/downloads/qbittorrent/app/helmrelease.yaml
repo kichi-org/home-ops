@@ -105,11 +105,11 @@ spec:
         globalMounts:
           - path: /config/.qbt.toml
             subPath: .qbt.toml
-      media:
+      data:
         type: nfs
         server: kl-san-1.localdomain
         path: /volume1/data
         globalMounts:
-          - path: /media
+          - path: /data
       tmp:
         type: emptyDir
