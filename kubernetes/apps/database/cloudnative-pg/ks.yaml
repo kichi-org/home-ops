@@ -23,7 +23,7 @@ metadata:
   name: cloudnative-pg-cluster
 spec:
   dependsOn:
-    - name: cloudnative-pg
+    - name: cloudnative-pg-app
       namespace: database
     - name: longhorn
       namespace: longhorn-system
