@@ -50,7 +50,13 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
     persistence:
       config:
-        existingClaim: "{{ .Release.Name }}"
+        # existingClaim: "{{ .Release.Name }}"
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 1Gi
+        globalMounts:
+          - path: /config
       config-file:
         type: configMap
         name: "{{ .Release.Name }}-configmap"
