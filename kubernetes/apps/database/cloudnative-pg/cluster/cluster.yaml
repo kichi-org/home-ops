@@ -41,23 +41,3 @@ spec:
     limits:
       memory: "2Gi"
 
-  bootstrap:
-    initdb:
-      import:
-        type: monolith
-        databases:
-          - teslamate
-        roles:
-          - teslamate
-        source:
-          externalCluster: old-teslamate
-  externalClusters:
-    - name: old-teslamate
-      connectionParameters:
-        host: 192.168.85.224
-        user: teslamate
-        dbname: teslamate
-      password:
-        name: cloudnative-pg-secret
-        key: TESLAMATE_PASS
-
