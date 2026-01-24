@@ -50,9 +50,9 @@ spec:
         roles:
           - teslamate
         source:
-          externalCluster: 192.168.85.224
+          externalCluster: old-teslamate
   externalClusters:
-    - name: 192.168.85.224
+    - name: old-teslamate
       connectionParameters:
         host: 192.168.85.224
         user: teslamate
