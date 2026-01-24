@@ -50,7 +50,7 @@ spec:
   datasource:
     type: postgres
     url: postgres-rw.database.svc.cluster.local:5432
-    user: postgres
+    user: teslamate
     secureJsonData:
       password: $TESLAMATE_DATABASE_PASS
     name: TeslaMate
