@@ -8,6 +8,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/battery-health.json
 
 ---
@@ -20,6 +21,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/charge-level.json
 
 ---
@@ -32,6 +34,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.github§usercontent.com/teslamate-org/teslamate/master/grafana/dashboards/charges.json
 
 ---
@@ -44,6 +47,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/charging-stats.json
 
 ---
@@ -56,6 +60,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/drive-stats.json
 
 ---
@@ -68,6 +73,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/drives.json
 
 ---
@@ -80,6 +86,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/efficiency.json
 
 ---
@@ -92,6 +99,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/locations.json
 
 ---
@@ -104,6 +112,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/mileage.json
 
 ---
@@ -116,6 +125,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/overview.json
 
 ---
@@ -128,6 +138,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/projected-range.json
 
 ---
@@ -140,6 +151,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/states.json
 
 ---
@@ -152,6 +164,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/statistics.json
 
 ---
@@ -164,6 +177,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/timeline.json
 
 ---
@@ -176,6 +190,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/trip.json
 
 ---
@@ -188,6 +203,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/updates.json
 
 ---
@@ -200,6 +216,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/vampire-drain.json
 
 ---
@@ -212,6 +229,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/visited.json
 
 ---
@@ -224,6 +242,7 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/internal/charge-details.json
 
 ---
@@ -236,4 +255,5 @@ spec:
   instanceSelector:
     matchLabels:
       grafana.internal/instance: grafana
+  folder: 'TeslaMate'
   url: https://raw.githubusercontent.com/teslamate-org/teslamate/master/grafana/dashboards/internal/drive-details.json
