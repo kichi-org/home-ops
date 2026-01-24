@@ -51,7 +51,7 @@ spec:
           - teslamate
         source:
           externalCluster: 192.168.85.224
-  externalCluster:
+  externalClusters:
     - name: 192.168.85.224
       connectionParameters:
         host: 192.168.85.224
