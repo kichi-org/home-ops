@@ -16,14 +16,14 @@ spec:
         main:
           enabled: true
           hostnames:
-            - alertmanager.internal.kichi.live
+            - alertmanager.kichi.live
           parentRefs:
             - name: envoy-internal
               namespace: network
       alertmanagerSpec:
         alertmanagerConfiguration:
           name: alertmanager
-        externalUrl: https://alertmanager.internal.kichi.live
+        externalUrl: https://alertmanager.kichi.live
         storage:
           volumeClaimTemplate:
             spec:
@@ -42,12 +42,12 @@ spec:
         main:
           enabled: true
           hostnames:
-            - prometheus.internal.kichi.live
+            - prometheus.kichi.live
           parentRefs:
             - name: envoy-internal
               namespace: network
       prometheusSpec:
-        externalUrl: https://prometheus.internal.kichi.live
+        externalUrl: https://prometheus.kichi.live
         version: v2.55.1 # override 'unsupported Prometheus version' error
         image:
           registry: docker.io

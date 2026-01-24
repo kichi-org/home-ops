@@ -5,7 +5,7 @@ kind: HTTPRoute
 metadata:
   name: longhorn-dashboard
 spec:
-  hostnames: ["longhorn.internal.kichi.live"]
+  hostnames: ["longhorn.kichi.live"]
   parentRefs:
     - name: envoy-internal
       namespace: network
