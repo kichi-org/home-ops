@@ -22,6 +22,10 @@ spec:
     remediation:
       retries: 3
   values:
+    image:
+      longhorn:
+        instanceManager:
+          tag: v1.11.0-hotfix-1
     persistence:
       defaultDataLocality: best-effort
     defaultSettings:
