@@ -76,8 +76,8 @@ spec:
           ttl: 86400s
           token:
             name: alertmanager-secret
-            key: pushover_api_token
+            key: ALERTMANAGER_PUSHOVER_TOKEN
           userKey:
             name: alertmanager-secret
-            key: pushover_api_userkey
+            key: PUSHOVER_USER_KEY
           urlTitle: View in Alertmanager
