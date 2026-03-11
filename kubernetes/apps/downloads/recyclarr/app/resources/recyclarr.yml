@@ -51,7 +51,7 @@ radarr:
         rename: true
         standard: plex-imdb
     quality_definition:
-      - name: sqp-uhd
+      type: sqp-uhd
     quality_profiles:
       - trash_id: c3933358ba2356bafc41524f81471069 # [SQP] SQP-2
         reset_unmatched_scores:
