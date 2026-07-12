@@ -57,7 +57,11 @@ spec:
             namespace: network
     persistence:
       config:
-        existingClaim: "{{ .Release.Name }}"
+        # existingClaim: "{{ .Release.Name }}"
+        type: persistentVolumeClaim
+        storageClass: longhorn
+        accessMode: ReadWriteOnce
+        size: 1Gi
         advancedMounts:
           dispatcharr:
             app:
