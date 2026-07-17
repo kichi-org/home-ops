@@ -8,5 +8,6 @@ components:
   - ../../components/alerts
 
 resources:
+  - ./dispatcharr/ks.yaml
   - ./namespace.yaml
   - ./plex/ks.yaml
