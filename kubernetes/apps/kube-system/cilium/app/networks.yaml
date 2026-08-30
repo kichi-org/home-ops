@@ -8,6 +8,8 @@ spec:
   blocks:
     - start: "172.16.0.30"
       stop: "172.16.0.99"
+    - start: "172.16.0.123"
+      stop: "172.16.0.123"
 ---
 apiVersion: cilium.io/v2alpha1
 kind: CiliumL2AnnouncementPolicy
