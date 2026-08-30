@@ -240,7 +240,9 @@ Expected: only the controller and the two listener pods; no leftover `*-work` PV
 
 ## Execution log
 
-- PR_V2 / PR_MAIN: _(Task 1 / Task 2)_
-- Old-cluster prune confirmed: _(Task 2 Step 3)_
-- Smoke runs: home-ops `Test` _(url)_, home-labs `tvb-postprocess` dry-run _(url)_
-- Date completed: _(Task 5)_
+- PR_V2 / PR_MAIN: #774 (`v2`, merged 6c25b40) / #775 (`main`, merged 6c2ac18)
+- Old-cluster prune confirmed 2026-08-30 21:39 (+08): Flux pruned controller and scale sets simultaneously, so the two `AutoscalingRunnerSet` objects were left in deletion with their finalizer. Fixed by recreating `home-ops-runner-secret` from 1Password, `helm install` of the controller chart 0.14.2 for one minute ("Deleted the runner scale set from Actions service" for both), then `helm uninstall`, secret and namespace removed. New cluster then logged "Creating a new runner scale set" (no stale registration).
+- Smoke runs: home-ops `Test` success https://github.com/kichi-org/home-ops/actions/runs/33314944387 ; home-labs `tvb-postprocess` dry-run success https://github.com/kichi-org/home-labs/actions/runs/33315010032 (NFS mount exercised)
+- Date completed: 2026-08-30
+
+Lesson for later cutovers: when removing an operator *and* its CRs from the old cluster in one PR, delete the CRs first (or keep the operator until the CRs are gone) so finalizers can run.
