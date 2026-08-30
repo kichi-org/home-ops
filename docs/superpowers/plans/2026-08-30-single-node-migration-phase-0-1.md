@@ -1508,8 +1508,20 @@ Record in the memory file `migration-design-doc` (or a new `migration-progress` 
 
 ## Execution log
 
-- Template commit: _(fill in Task 0.1)_
-- SCHEMATIC_ID / TALOS_VER: _(Task 0.2)_
-- VM 811 MAC: _(Task 0.3)_
-- R2 1Password item: _(Task 1.4)_
-- Restore drills: _(Task 1.8)_
+- Template commit: `07a63b52` (2026-08-29; only mise tool bumps since b5f9619)
+- SCHEMATIC_ID / TALOS_VER: `ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515` / `v1.13.7` (Kubernetes v1.36.4); ISO `san-iso:iso/talos-v1.13.7-qemu-metal-amd64.iso`
+- VM 811 MAC: `bc:24:11:40:10:ba` (maintenance lease was 172.16.0.226)
+- R2 1Password item: `longhorn` (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY); restic password in new item `volsync`
+- Restore drills (2026-08-30): VolSync `ReplicationDestination` restored the scratch stamp byte-identical; CNPG `drill` cluster recovered from R2 including WAL after the base backup — both OK
+- Pushover: test alert `NewClusterTest` delivered to Calvin's phone
+- Steady state at tag `phase-1-foundation`: 491m CPU / 4.7 GiB RSS, all Kustomizations and HelmReleases Ready
+
+Deviations from the plan as written:
+
+- Task 0.3/1.1: topf only dials the node's static IP, so the first apply was `talosctl apply-config --insecure -n 172.16.0.226 --file talos/rendered/talos-11.yaml`; bootstrap then needed `topf apply --auto-bootstrap --allow-not-ready`.
+- Task 0.4: render produced a whole-/24 LB pool and a `shortlived` issuer — both corrected before the first commit; `cloudflare-dns` also had to be removed from `bootstrap/helmfile/crds.yaml`.
+- Task 1.3: `openebs-crds.csi.volumeSnapshots` must stay **enabled** — VolSync 0.16 crash-loops without the VolumeSnapshot API types.
+- Task 1.4: plugin-based backups do not update `cnpg_collector_last_available_backup_timestamp`; the stale-backup alert uses kube-state-metrics customResourceState metric `cnpg_backup_stopped_at{phase="completed"}` instead (+ `CNPGBackupMissing` via `absent()`).
+- Task 1.5: VolSync ServiceMonitor must select `port: https` (the pod declares no containerPort, so `targetPort` never matches).
+- Task 1.6/1.7: kube-prometheus-stack renders GrafanaDashboard CRs, so it depends on the `grafana` Kustomization; the operator's own GrafanaDashboard lives in `grafana/instance`, not next to the HelmRelease.
+- Task 1.9: `just --yes template tidy` after creating an empty `.github/template-tests` (the seed excluded it).
