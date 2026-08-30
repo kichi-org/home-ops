@@ -6,8 +6,12 @@ metadata:
 spec:
   allowFirstLastIPs: "No"
   blocks:
+    - start: "172.16.0.11"
+      stop: "172.16.0.13"
     - start: "172.16.0.30"
       stop: "172.16.0.99"
+    - start: "172.16.0.200"
+      stop: "172.16.0.200"
     - start: "172.16.0.123"
       stop: "172.16.0.123"
     - start: "172.16.0.128"
