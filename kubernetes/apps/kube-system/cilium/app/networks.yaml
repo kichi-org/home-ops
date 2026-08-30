@@ -10,6 +10,8 @@ spec:
       stop: "172.16.0.99"
     - start: "172.16.0.123"
       stop: "172.16.0.123"
+    - start: "172.16.0.128"
+      stop: "172.16.0.128"
 ---
 apiVersion: cilium.io/v2alpha1
 kind: CiliumL2AnnouncementPolicy
