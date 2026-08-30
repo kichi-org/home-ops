@@ -24,15 +24,15 @@
 
 Branch `v2`:
 
-| Path                                                        | Responsibility                                                                                                 |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `kubernetes/apps/media/{namespace,kustomization}.yaml`      | namespace (`alerts` component), `./plex/ks.yaml`                                                               |
-| `kubernetes/apps/media/plex/ks.yaml`                        | deps `openebs`, `onepassword`; VolSync component, `APP: plex`                                                  |
-| `kubernetes/apps/media/plex/app/*`                          | copied; `openebs-hostpath` + `retain: true`; `PLEX_ADVERTISE_URL` gains `https://plex-direct.kichi.live:32400` |
-| `kubernetes/apps/network/cloudflare-tunnel/{ks.yaml,app/*}` | copied verbatim from `main` incl. `secret.sops.yaml` (tunnel token) and the `external.kichi.live` DNSEndpoint  |
-| `kubernetes/apps/network/cloudflare-dns/{ks.yaml,app/*}`    | copied verbatim incl. `secret.sops.yaml` (API token), owner `default`                                          |
-| `kubernetes/apps/network/kustomization.yaml`                | + `cloudflare-dns/ks.yaml`, `cloudflare-tunnel/ks.yaml`                                                        |
-| `kubernetes/apps/kube-system/cilium/app/networks.yaml`      | + block `172.16.0.128–172.16.0.128`                                                                            |
+| Path                                                        | Responsibility                                                                                                |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `kubernetes/apps/media/{namespace,kustomization}.yaml`      | namespace (`alerts` component), `./plex/ks.yaml`                                                              |
+| `kubernetes/apps/media/plex/ks.yaml`                        | deps `openebs`, `onepassword`; VolSync component, `APP: plex`                                                 |
+| `kubernetes/apps/media/plex/app/*`                          | copied; `openebs-hostpath` + `retain: true`; `PLEX_ADVERTISE_URL` unchanged (direct path skipped)             |
+| `kubernetes/apps/network/cloudflare-tunnel/{ks.yaml,app/*}` | copied verbatim from `main` incl. `secret.sops.yaml` (tunnel token) and the `external.kichi.live` DNSEndpoint |
+| `kubernetes/apps/network/cloudflare-dns/{ks.yaml,app/*}`    | copied verbatim incl. `secret.sops.yaml` (API token), owner `default`                                         |
+| `kubernetes/apps/network/kustomization.yaml`                | + `cloudflare-dns/ks.yaml`, `cloudflare-tunnel/ks.yaml`                                                       |
+| `kubernetes/apps/kube-system/cilium/app/networks.yaml`      | + block `172.16.0.128–172.16.0.128`                                                                           |
 
 Branch `main`: delete `kubernetes/apps/media/plex/`, `kubernetes/apps/network/cloudflare-tunnel/`, `kubernetes/apps/network/cloudflare-dns/`, `kubernetes/apps/default/echo/`; drop their lines from the three `kustomization.yaml`s.
 
@@ -96,31 +96,9 @@ Expected: `TUNNEL_TOKEN` and `api-token` decrypt with the v2 `age.key` (same rec
 
 - [ ] **Step 2: Commit, push, open PR (base `v2`)** — `feat(media): port plex, cloudflare tunnel and external-dns`. Record `PR_V2`. **Do not merge yet.**
 
-### Task 2: Cloudflare + UniFi prep (safe before the cutover — `.128` is unchanged)
+### Task 2: ~~Cloudflare + UniFi prep~~ — SKIPPED (Calvin, 2026-08-30)
 
-- [ ] **Step 1: Cloudflare — create the grey A record `plex-direct.kichi.live` = current WAN IP** (MCP `execute`, non-GET → Calvin approves)
-
-```js
-async () =>
-    cloudflare.request({
-        method: "POST",
-        path: "/zones/d287b9fab491487559fdee19d7a80d9f/dns_records",
-        body: {
-            type: "A",
-            name: "plex-direct",
-            content: "<current apex A content, 202.186.206.83 at plan time>",
-            ttl: 120,
-            proxied: false,
-            comment: "Plex direct 32400; updated by UniFi DDNS",
-        },
-    });
-```
-
-Expected: record created, `proxied:false`. It is not managed by external-dns (no owner TXT), so both external-dns instances leave it alone.
-
-- [ ] **Step 2: UniFi — repoint the Cloudflare DDNS entry from `kichi.live` to `plex-direct.kichi.live`** (`unifi_update_dynamic_dns`, id `6837499f485d90786c7cc7f0`, preview → confirm). Field: `host_name: plex-direct.kichi.live` (login/token unchanged). Expected: entry updated; within minutes the record shows the WAN IP (inadyn updates, doesn't create). The apex `A kichi.live` stays as-is (stale but harmless; delete later if wanted).
-
-- [ ] **Step 3: UniFi — add port forward `Plex` TCP 32400 → `172.16.0.128:32400`** (`unifi_create_simple_port_forward` / `unifi_create_port_forward`, preview → confirm). Verify from outside is not possible from the LAN (hairpin); verify via Plex's Remote Access page later (Task 5).
+Decision: keep Plex tunnel-only; no `plex-direct` record, no DDNS change, no 32400 forward ("current configuration has been working fine"). `PLEX_ADVERTISE_URL` on `v2` keeps only the tunnel hostname, `.128` and the in-cluster name. Supersedes `network-design-decisions` #5.
 
 ### Task 3: Freeze old Plex and stage its config on the NAS
 
