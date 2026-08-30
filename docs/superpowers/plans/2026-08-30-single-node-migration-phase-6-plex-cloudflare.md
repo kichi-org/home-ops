@@ -225,8 +225,13 @@ Expected: `Successful`; R2 usage check afterwards (1.4 GB Plex + ~0.6 GB others 
 
 ## Execution log
 
-- PR_V2 / PR_MAIN: _(…)_
-- Cloudflare `plex-direct` record id / UniFi DDNS + forward ids: _(Task 2)_
-- Plex outage: old stopped _(…)_ → new up _(…)_
-- Tar size / entries; libraries listed after restore: _(…)_
-- Date completed: _(…)_
+- PR_V2 / PR_MAIN: #781 (`v2`, merged 4975d53) + follow-up ed3f4b7 `fix(cloudflare-dns): install the dnsendpoint crd` / #782 (`main`, merged 7a0d86e) — #780 (drop dispatcharr) merged just before it
+- Cloudflare/UniFi prep: SKIPPED (Calvin: keep Plex tunnel-only); `PLEX_ADVERTISE_URL` unchanged
+- Plex outage: old stopped 23:41:54 → new up 23:50:26 (+08, 2026-08-30); tunnel connector from talos-11 registered 00:02:26 (2026-08-31) — `plex.kichi.live` unreachable from the internet ≈23:47 → 00:02
+- Tar: 1,346,880,512 B / 10,852 entries; libraries after restore: Movies, Cartoons, TVB, US Series, Music (no rescan)
+- Verification: `plex.kichi.live` via Cloudflare edge 200 (`cf-ray`), `.128` 200, tunnel 4 QUIC connections, external-dns deleted `echo` + recreated `external` CNAME, Plex VolSync first sync Successful 16:02Z
+- Date completed: 2026-08-31 00:10 (+08)
+
+Deviations:
+- `v2` lacked the `DNSEndpoint` CRD (its bootstrap `crds.yaml` had `cloudflare-dns` removed in phase 0), so the `cloudflare-tunnel` Kustomization failed its dry-run; while it was down the new external-dns deleted `external.kichi.live` (owner `default`, no DNSEndpoint) and recreated it once the CRD existed. Fixed with `crd.create: true` on external-dns + `dependsOn: cloudflare-dns` on the tunnel.
+- LAN split-DNS (old k8s-gateway/Technitium) still resolves `plex.kichi.live` to the old envoy-external `.13` → 404 from LAN browsers until step 7; Plex apps on the LAN reach `.128` directly.
