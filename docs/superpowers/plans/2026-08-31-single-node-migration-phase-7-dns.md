@@ -23,15 +23,15 @@
 
 Branch `v2`:
 
-| Path | Responsibility |
-|---|---|
-| `kubernetes/apps/network/technitium/{ks.yaml,app/*}` | copied; `openebs-hostpath` + `retain: true`; VolSync component with `VOLSYNC_UID/GID: "0"` |
-| `kubernetes/apps/network/technitium-dns/{ks.yaml,app/*}` | copied verbatim (owner `technitium`, TSIG from 1Password) |
-| `kubernetes/apps/network/namespace.yaml` | + annotation `volsync.backube/privileged-movers: "true"` (root-owned Technitium files) |
-| `kubernetes/apps/network/kustomization.yaml` | + technitium, technitium-dns |
-| `kubernetes/apps/network/k8s-gateway/app/helmrelease.yaml` | `lbipam.cilium.io/ips: 172.16.0.11` |
-| `kubernetes/apps/network/envoy-gateway/app/envoy.yaml` | internal `172.16.0.12`, external `172.16.0.13` |
-| `kubernetes/apps/kube-system/cilium/app/networks.yaml` | + blocks `.11–.13`, `.200` |
+| Path                                                       | Responsibility                                                                             |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `kubernetes/apps/network/technitium/{ks.yaml,app/*}`       | copied; `openebs-hostpath` + `retain: true`; VolSync component with `VOLSYNC_UID/GID: "0"` |
+| `kubernetes/apps/network/technitium-dns/{ks.yaml,app/*}`   | copied verbatim (owner `technitium`, TSIG from 1Password)                                  |
+| `kubernetes/apps/network/namespace.yaml`                   | + annotation `volsync.backube/privileged-movers: "true"` (root-owned Technitium files)     |
+| `kubernetes/apps/network/kustomization.yaml`               | + technitium, technitium-dns                                                               |
+| `kubernetes/apps/network/k8s-gateway/app/helmrelease.yaml` | `lbipam.cilium.io/ips: 172.16.0.11`                                                        |
+| `kubernetes/apps/network/envoy-gateway/app/envoy.yaml`     | internal `172.16.0.12`, external `172.16.0.13`                                             |
+| `kubernetes/apps/kube-system/cilium/app/networks.yaml`     | + blocks `.11–.13`, `.200`                                                                 |
 
 Branch `main`: delete `kubernetes/apps/network/{technitium,technitium-dns,k8s-gateway,envoy-gateway}/` and their lines in `network/kustomization.yaml`.
 
@@ -85,6 +85,7 @@ EOF
 grep -n 'privileged' kubernetes/apps/network/namespace.yaml; grep -rn '172.16.0.3[123]' kubernetes/apps/network || echo "no transition IPs left"
 for d in network network/technitium/app network/technitium-dns/app network/k8s-gateway/app network/envoy-gateway/app kube-system/cilium/app; do kubectl kustomize kubernetes/apps/$d >/dev/null && echo "OK $d"; done
 ```
+
 Expected: annotation present; no `.31/.32/.33` left; all builds OK. Note: the `network` namespace object is Flux-managed from `namespace.yaml`, so the annotation applies on reconcile.
 
 - [ ] **Step 2: Commit, push, PR (base `v2`)** — `feat(network): port technitium and re-pin gateways to canonical ips`. Record `PR_V2`. **Do not merge yet.**
@@ -116,6 +117,7 @@ kubectl -n network wait pod/stage-technitium --for=jsonpath='{.status.phase}'=Su
 cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PATH KUBECONFIG=$PWD/kubeconfig
 kubectl run stagecheck --rm -i --restart=Never --image=busybox:1.36 --overrides='{"spec":{"containers":[{"name":"c","image":"busybox:1.36","command":["sh","-c","tar -tf /nfs/_migration/technitium.tar | grep -cE \"^./(zones|dns.config|blocked.config|allowed.config|apps|blocklists)\" && echo ok technitium.tar"],"volumeMounts":[{"name":"nfs","mountPath":"/nfs"}]}],"volumes":[{"name":"nfs","nfs":{"server":"kl-san-1.localdomain","path":"/volume1/data"}}]}}' 2>&1 | grep -vE '^pod |warning|If you|recorded'
 ```
+
 Expected: tar ≈ 120 MB (stats/logs/cache excluded — regenerated), contains `zones/`, `dns.config`, block lists, `apps/`; `ok technitium.tar` from talos-11. The stage pod runs as root (no securityContext) because the files are root-owned.
 
 ### Task 3: Remove DNS + gateways from the old cluster (`main` PR, merged first)
@@ -133,6 +135,7 @@ git add kubernetes && git commit -q -m "chore(network): move dns and gateways to
 git push -u origin chore/dns-cutover
 git checkout -q main && git stash pop -q 2>/dev/null || true
 ```
+
 GitHub MCP `create_pull_request` (base `main`). Record `PR_MAIN`. (The remaining old-cluster HTTPRoutes — grafana, prometheus, alertmanager, longhorn, victoria-logs, flux-webhook — lose their gateway; expected, the old cluster is retired next.)
 
 - [ ] **Step 2: Calvin merges; watch the prune and the IPs**
@@ -143,6 +146,7 @@ flux --namespace flux-system reconcile kustomization flux-system --with-source |
 until ! kubectl -n network get helmrelease --no-headers 2>/dev/null | grep -E 'technitium|k8s-gateway|envoy-gateway' | grep -q .; do sleep 10; done; echo "pruned $(date +%T)"
 kubectl get svc -A --no-headers | grep -E '172\.16\.0\.(200|11|12|13)\b' || echo "canonical IPs released"
 ```
+
 If a HelmRelease lingers (suspended at deletion), delete the leftover `network` objects by hand (`kubectl -n network delete deploy,svc,pvc --all` is acceptable — the tar is the copy).
 
 ### Task 4: Enable on the new cluster and restore (merge `PR_V2`)
@@ -177,6 +181,7 @@ EOF
 kubectl -n network wait pod/restore-technitium --for=jsonpath='{.status.phase}'=Succeeded --timeout=600s && kubectl -n network logs restore-technitium && kubectl -n network delete pod restore-technitium
 flux -n network resume helmrelease technitium >/dev/null; kubectl -n network scale deploy/technitium --replicas=1; kubectl -n network rollout status deploy/technitium --timeout=300s | tail -1; echo "technitium up $(date +%T)"
 ```
+
 Expected: the three gateway Services on `.11/.12/.13` (Cilium updates them in place), `technitium LB=172.16.0.200`, restore lists `zones dns.config blocked.config …`, Technitium rolls out. Record the time (end of the LAN DNS gap).
 
 - [ ] **Step 2: Verify resolution from the LAN and the new cluster's split-DNS**
@@ -192,6 +197,7 @@ curl -sk --max-time 10 -o /dev/null -w 'technitium ui http=%{http_code}\n' https
 cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PATH KUBECONFIG=$PWD/kubeconfig
 kubectl -n network logs deploy/external-dns-technitium --since=10m | grep -iE 'Changing|error' | head -6
 ```
+
 Expected: `*.kichi.live` → `172.16.0.12` (internal CNAME) / `.13` for `plex`, `external`; k8s-gateway on `.11` answers; upstream resolution works; ad-block returns nothing/0.0.0.0; via the LAN resolver `grafana.kichi.live` → `.12` and HTTPS 200 from the **new** Grafana (13.0.1); Plex 200 via name (the phase-6 LAN 404 is gone); technitium-dns logs show no errors (records already match, so few/no changes).
 
 - [ ] **Step 3: VolSync first sync (privileged mover), staging cleanup**
@@ -203,6 +209,7 @@ until [ "$(kubectl -n network get replicationsource technitium -o jsonpath='{.st
 kubectl -n network get replicationsource technitium -o jsonpath='{.status.latestMoverStatus.result} {.status.lastSyncTime}{"\n"}'
 kubectl run stageclean --rm -i --restart=Never --image=busybox:1.36 --overrides='{"spec":{"containers":[{"name":"c","image":"busybox:1.36","command":["sh","-c","rm -rf /nfs/_migration && echo staging removed"],"volumeMounts":[{"name":"nfs","mountPath":"/nfs"}]}],"volumes":[{"name":"nfs","nfs":{"server":"kl-san-1.localdomain","path":"/volume1/data"}}]}}' 2>&1 | grep -vE '^pod |warning|If you|recorded'
 ```
+
 Expected: `Successful` (if the mover fails with a permission error, the namespace annotation did not apply — `kubectl annotate ns network volsync.backube/privileged-movers=true --overwrite` and retrigger).
 
 ### Task 5: Close out
@@ -213,8 +220,10 @@ Expected: `Successful` (if the mover fails with a permission error, the namespac
 
 ## Execution log
 
-- PR_V2 / PR_MAIN: _(…)_
-- LAN DNS gap: old technitium stopped _(…)_ → new technitium up _(…)_
-- Tar size / entries: _(…)_
-- Resolution checks: _(…)_
-- Date completed: _(…)_
+- PR_V2 / PR_MAIN: #783 (`v2`, merged bbc1640) / #784 (`main`, merged ed77501)
+- LAN DNS gap: old technitium stopped 00:13:21 → new technitium up 00:18:07 (+08, 2026-08-31); gateways re-pinned to .11/.12/.13 at 00:17:29; `.200` live on talos-11
+- Tar: 119,644,672 B / 101 entries (stats, logs, cache.bin excluded); restore 114 MB
+- Resolution checks: `@.200` → internal .12 / external .13 for all app names, `@.11` k8s-gateway answers, upstream OK, doubleclick.net blocked, LAN resolver → .12; by name: Grafana 13.0.1 (new) 200, Plex 200, Technitium UI 200, Sonarr 200; technitium-dns re-added all CNAME/TXT records with TSIG after a pod restart (its earlier errors were from the empty pre-restore instance); Technitium VolSync first sync Successful (privileged mover, uid 0)
+- Date completed: 2026-08-31 00:30 (+08)
+
+Notes: `network/namespace.yaml` already carried a `kustomize.toolkit.fluxcd.io/prune: disabled` annotation block — the VolSync annotation had to be merged into it (a duplicate `annotations:` key was caught before commit). The old cluster now serves nothing user-facing (only Longhorn, monitoring, cert-manager, Flux remain) → step 8 soak with VMs 801–803 powered off.
