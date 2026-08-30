@@ -9,7 +9,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: volsync
   endpoints:
-    - targetPort: 8443
+    - port: https
       scheme: https
       tlsConfig:
         insecureSkipVerify: true
