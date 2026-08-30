@@ -220,8 +220,10 @@ Expected: `Successful` (if the mover fails with a permission error, the namespac
 
 ## Execution log
 
-- PR_V2 / PR_MAIN: _(…)_
-- LAN DNS gap: old technitium stopped _(…)_ → new technitium up _(…)_
-- Tar size / entries: _(…)_
-- Resolution checks: _(…)_
-- Date completed: _(…)_
+- PR_V2 / PR_MAIN: #783 (`v2`, merged bbc1640) / #784 (`main`, merged ed77501)
+- LAN DNS gap: old technitium stopped 00:13:21 → new technitium up 00:18:07 (+08, 2026-08-31); gateways re-pinned to .11/.12/.13 at 00:17:29; `.200` live on talos-11
+- Tar: 119,644,672 B / 101 entries (stats, logs, cache.bin excluded); restore 114 MB
+- Resolution checks: `@.200` → internal .12 / external .13 for all app names, `@.11` k8s-gateway answers, upstream OK, doubleclick.net blocked, LAN resolver → .12; by name: Grafana 13.0.1 (new) 200, Plex 200, Technitium UI 200, Sonarr 200; technitium-dns re-added all CNAME/TXT records with TSIG after a pod restart (its earlier errors were from the empty pre-restore instance); Technitium VolSync first sync Successful (privileged mover, uid 0)
+- Date completed: 2026-08-31 00:30 (+08)
+
+Notes: `network/namespace.yaml` already carried a `kustomize.toolkit.fluxcd.io/prune: disabled` annotation block — the VolSync annotation had to be merged into it (a duplicate `annotations:` key was caught before commit). The old cluster now serves nothing user-facing (only Longhorn, monitoring, cert-manager, Flux remain) → step 8 soak with VMs 801–803 powered off.
