@@ -9,12 +9,19 @@ spec:
     - name: cloudnative-pg.backups
       rules:
         - alert: CNPGBackupStale
-          expr: time() - max by (cluster) (cnpg_collector_last_available_backup_timestamp) > 36 * 3600
+          expr: time() - max by (cluster) (cnpg_backup_stopped_at{phase="completed"}) > 36 * 3600
           for: 30m
           labels:
             severity: critical
           annotations:
             summary: "CNPG {{ $labels.cluster }}: last base backup older than 36h"
+        - alert: CNPGBackupMissing
+          expr: absent(cnpg_backup_stopped_at{phase="completed"})
+          for: 2h
+          labels:
+            severity: critical
+          annotations:
+            summary: "No completed CNPG backup is visible to Prometheus"
         - alert: CNPGWALArchiveFailing
           expr: increase(cnpg_collector_pg_wal_archive_status{value="failed"}[30m]) > 0
           for: 15m
