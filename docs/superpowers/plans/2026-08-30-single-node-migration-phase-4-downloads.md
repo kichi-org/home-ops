@@ -296,8 +296,13 @@ Expected: `staging removed`. (Only after Task 4 Step 4 shows VolSync copies in R
 
 ## Execution log
 
-- PR_V2 / PR_MAIN: _(Task 1 / Task 3)_
-- Outage window: old stopped _(Task 2 Step 1)_ → new restored _(Task 4 Step 2)_
-- Staged tar sizes: _(Task 2 Step 2)_
-- Library counts after restore (series / movies / indexers / torrents): _(Task 4 Step 3)_
-- Date completed: _(…)_
+- PR_V2 / PR_MAIN: #778 (`v2`, merged b9b402d) / #779 (`main`, merged 4ed1aac); follow-up `bf20d5f fix(recyclarr): use an emptydir for the config cache`
+- Outage window: old stopped 22:25:00 → new restored and scaled up ≈22:57 (+08)
+- Staged tar sizes: sonarr 43.8 MB / radarr 59.3 MB / prowlarr 57.3 MB / qui 3.5 MB / qbittorrent 11.7 MB; verified readable from talos-11 before the `main` merge
+- Library counts after restore: 10 series (2 root folders accessible) / 20 movies (root accessible) / 5 indexers / 4 torrents; `.123:50469` open; five VolSync first syncs Successful 14:58Z; recyclarr manual run synced sonarr+radarr
+- Date completed: 2026-08-30
+
+Deviations:
+- Deleting the `main` Kustomizations while the HelmReleases were **suspended** removed the HelmRelease objects without running `helm uninstall` — Deployments, Services (incl. `.123`) and PVCs were orphaned. Fixed by deleting the whole `downloads` namespace on the old cluster. Rule: resume HelmReleases before the prune, or plan to delete the namespace.
+- After `flux resume`, Helm did not scale the deployments back from 0 (no drift correction) — `kubectl scale --replicas=1` was needed.
+- recyclarr is a CronJob, so its `WaitForFirstConsumer` PVC never bound and the Helm install timed out; its config is a regenerable cache → switched to `emptyDir` (no VolSync for recyclarr, as planned).
