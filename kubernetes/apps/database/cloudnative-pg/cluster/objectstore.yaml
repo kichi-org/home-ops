@@ -1,0 +1,22 @@
+---
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: r2
+spec:
+  retentionPolicy: 7d
+  configuration:
+    destinationPath: s3://kichi/cnpg/
+    endpointURL: https://932a695a6a0d664160ac575fa0e4fda8.r2.cloudflarestorage.com
+    s3Credentials:
+      accessKeyId:
+        name: cloudnative-pg-r2-secret
+        key: AWS_ACCESS_KEY_ID
+      secretAccessKey:
+        name: cloudnative-pg-r2-secret
+        key: AWS_SECRET_ACCESS_KEY
+    wal:
+      compression: gzip
+      maxParallel: 2
+    data:
+      compression: gzip
