@@ -127,7 +127,7 @@ Expected: `san-iso:iso/talos-<ver>-qemu-metal-amd64.iso` listed.
 
 **Produces:** VM 811 booted into Talos maintenance mode with a DHCP lease in `.220–.254`; `VM_MAC`.
 
-- [ ] **Step 1: Propose and run the create command** (on the host; Calvin approves — or via Proxmox MCP `create_vm` on `proxmox-vhost2` if it exposes all of these flags)
+- [ ] **Step 1: Propose and run the create command** (Calvin runs it over SSH — the MCP tokens are read-only and `create_vm` does not expose every `qm` flag; a scoped RW token for start/stop/snapshot/backup is optional, see spec follow-ups)
 
 ```bash
 ssh root@192.168.85.251 qm create 811 \
@@ -423,6 +423,13 @@ dig +short @172.16.0.32 flux-webhook.kichi.live
 curl -skI --resolve flux-webhook.kichi.live:443:172.16.0.33 https://flux-webhook.kichi.live/ | head -1
 ```
 Expected: `envoy-internal 172.16.0.31`, `envoy-external 172.16.0.33`, `k8s-gateway 172.16.0.32`; Certificate `READY=True` (Let's Encrypt wildcard via DNS-01 — coexists with the old cluster's); dig returns `172.16.0.33`; curl gets an HTTP status (404 is fine).
+
+Rate-limit guard: both clusters request the identical `kichi.live` + `*.kichi.live` name set, and Let's Encrypt allows only 5 duplicate certificates per week. Check the profile:
+```bash
+kubectl get clusterissuer -o yaml | grep -n 'profile:'
+kubectl -n network get certificate -o jsonpath='{.items[0].spec.duration}{"\n"}'
+```
+If the issuer uses `profile: shortlived` (160 h certs), remove the `profile` line from `kubernetes/apps/cert-manager/cert-manager/app/` (ClusterIssuer) and any `duration:`/`renewBefore:` on the Certificate so the new cluster uses 90-day certs until the old cluster is retired; commit as `fix(cert-manager): classic profile during dual-cluster transition`.
 
 - [ ] **Step 5: Commit any bootstrap-generated tracked changes**
 
