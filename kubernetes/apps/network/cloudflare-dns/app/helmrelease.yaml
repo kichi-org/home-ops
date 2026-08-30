@@ -9,6 +9,8 @@ spec:
     name: cloudflare-dns
   interval: 1h
   values:
+    crd:
+      create: true
     fullnameOverride: *app
     provider: cloudflare
     env:
