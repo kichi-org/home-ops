@@ -52,11 +52,8 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
     persistence:
       config:
-        type: persistentVolumeClaim
-        storageClass: openebs-hostpath
-        retain: true
-        accessMode: ReadWriteOnce
-        size: 1Gi
+        # cronjob: a WaitForFirstConsumer PVC never binds before the first run and the content is a regenerable cache
+        type: emptyDir
         globalMounts:
           - path: /config
       config-file:
