@@ -6,4 +6,5 @@ resources:
   - ./pvc.yaml
   - ./grafanadatasource.yaml
   - ./grafana.yaml
+  - ./grafanadashboard.yaml
   - ./servicemonitor.yaml
