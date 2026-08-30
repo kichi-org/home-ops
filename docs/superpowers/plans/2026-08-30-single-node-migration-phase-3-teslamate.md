@@ -241,7 +241,9 @@ Expected: `20` dashboards in folder TeslaMate (allow a few minutes for the opera
 
 ## Execution log
 
-- PR_V2 / PR_MAIN: _(Task 1 / Task 2)_
-- Old counts (Task 2 Step 1) / new counts (Task 3 Step 3): _(…)_
-- Data-gap window: old stopped _(time)_ → new online _(time)_
-- Date completed: _(…)_
+- PR_V2 / PR_MAIN: #776 (`v2`, merged fa296c7) / #777 (`main`, merged 10a3db0)
+- Old counts (Task 2 Step 1) / new counts (Task 3 Step 3): cars 1 / drives 830 / charging_processes 123 / positions 2907561 / schema 20260808090000 — identical; extensions plpgsql cube earthdistance pg_stat_statements; 388 MB; role password hash identical (pg_authid)
+- Data-gap window: old stopped 22:09:50 → new online 22:14:05 (+08); car offline since 2026-08-29 09:22, so nothing was missed
+- Date completed: 2026-08-30
+
+Deviations: the `main` prune also deleted the ESO-owned `teslamate-secret`, so the role password could not be read from the old cluster as planned; the role was copied instead with `pg_dumpall --roles-only` (SCRAM hash, no plaintext handled). `pg_restore` ran without `-j` (stdin) in 25 s.
