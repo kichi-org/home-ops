@@ -88,13 +88,13 @@ DHCP on VLAN 100 is shrunk to `.220–.254` (Talos install pool) before the VM i
 | PVC backup | VolSync + restic, `copyMethod: Direct` (no snapshot controller needed) | new |
 | Upgrades | tuppr (Talos + K8s), Renovate self-hosted app | template / carry |
 | Observability | kube-prometheus-stack (1 replica, 7 d / 15 Gi retention), grafana-operator + Grafana, Alertmanager → Pushover; VictoriaLogs optional, Gatus later on envoy-internal | carry, trimmed |
-| Dropped | Longhorn, descheduler, echo, Immich, `kichi.internal`, dead `ceph-block` ref, aqua/mise/Taskfile | — |
+| Dropped | Longhorn, descheduler, echo, Immich, Dispatcharr, `kichi.internal`, dead `ceph-block` ref, aqua/mise/Taskfile | — |
 
 Prometheus is "nice-to-have" but it is the alert path for Pushover and for the backup alerts below, so it stays with reduced retention.
 
 ### 3.5 Applications
 
-Must-have: Plex, TeslaMate (+ Grafana dashboards), Sonarr/Radarr/Prowlarr, qBittorrent, qui, Recyclarr, Dispatcharr, Technitium, ARC (home-ops + home-labs runner sets).
+Must-have: Plex, TeslaMate (+ Grafana dashboards), Sonarr/Radarr/Prowlarr, qBittorrent, qui, Recyclarr, Technitium, ARC (home-ops + home-labs runner sets). Dispatcharr was dropped on 2026-08-30 (no longer used).
 Every app's PVC moves to `openebs-hostpath`; media stays on NFS (`kl-san-1:/volume1/data`, export ACL already covers `.111`).
 
 ## 4. Repository strategy
@@ -135,7 +135,7 @@ Bootstrap order: `just` render → `talosctl apply` (node picks up a `.220–.25
 ### 6.2 Backup layers
 
 1. **CNPG → R2**: continuous WAL archiving + daily base backup, retention 7 d (TeslaMate, Grafana if it uses PG).
-2. **VolSync/restic → R2**: Plex, Technitium, Sonarr, Radarr, Prowlarr, qBittorrent, Dispatcharr, Grafana — hourly, keep daily 7 / weekly 4. Each app ships with its `ReplicationSource` from the first commit ("backup from day one").
+2. **VolSync/restic → R2**: Plex, Technitium, Sonarr, Radarr, Prowlarr, qBittorrent, qui, Grafana — hourly, keep daily 7 / weekly 4. Each app ships with its `ReplicationSource` from the first commit ("backup from day one").
 3. **vzdump** of VM 811 weekly, snapshot mode, keep 2, to `san-iso` (`/volume1/proxmox`) — disaster floor. Scheduled once the VM is on kl-vhost-1; on kl-vhost-2 (`kingston-nvme` is thick LVM, no snapshots) run it in stop or suspend mode if wanted before the move.
 
 ### 6.3 Alerting
@@ -167,7 +167,7 @@ Each step is one or more PRs on `v2`; each singleton cutover is **exactly one PR
 | 2 | **ARC** (both scale sets; home-labs depends on it) | revert PR |
 | 3 | **TeslaMate + Grafana**: stop old TeslaMate → CNPG `bootstrap.initdb.import` from old cluster's PG (`.122`) → start new; import Grafana dashboards/DB | revert PR, old PG untouched |
 | 4 | ***arr + qBittorrent + qui + Recyclarr**: stop old, tar config dirs to NFS staging (`/volume1/data/_migration`), untar into hostpath PVCs, start new; qBittorrent → `.123` | revert PR |
-| 5 | **Dispatcharr** (same rsync pattern) | revert PR |
+| 5 | ~~Dispatcharr~~ — **dropped 2026-08-30** (no longer used); removed from the old cluster instead of migrated | — |
 | 6 | **Plex + Cloudflare**: stop old Plex, copy `Library/…` metadata (no rescan), enable cloudflared + external-dns on new, disable on old, Plex → `.128`, add 32400 forward | revert PR (tunnel reconnects to old within a minute) |
 | 7 | **DNS**: Technitium (export/import backup, → `.200`), `technitium-dns` external-dns, k8s-gateway → `.11`, envoy-internal → `.12`, envoy-external → `.13` | revert PR; gateway NS record still points at `.11` so only the answering cluster changes |
 | 8 | Soak 1–2 weeks with old cluster **powered off** (not deleted) | power on, revert last PRs |
