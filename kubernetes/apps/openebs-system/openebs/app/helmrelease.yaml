@@ -45,4 +45,6 @@ spec:
     openebs-crds:
       csi:
         volumeSnapshots:
-          enabled: false
+          # VolSync needs the VolumeSnapshot API types even for copyMethod Direct
+          enabled: true
+          keep: true
