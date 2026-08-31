@@ -1,24 +1,6 @@
 ---
-apiVersion: cilium.io/v2alpha1
-kind: CiliumLoadBalancerIPPool
-metadata:
-  name: pool
-spec:
-  allowFirstLastIPs: "No"
-  blocks:
-    - start: "172.16.0.11"
-      stop: "172.16.0.13"
-    - start: "172.16.0.30"
-      stop: "172.16.0.99"
-    - start: "172.16.0.200"
-      stop: "172.16.0.200"
-    - start: "172.16.0.123"
-      stop: "172.16.0.123"
-    - start: "172.16.0.128"
-      stop: "172.16.0.128"
----
 # Routed pool: not a VLAN subnet, reachable only via the BGP /32s the UCG
-# learns from Cilium. Old in-subnet pool above is removed at cutover.
+# learns from Cilium.
 apiVersion: cilium.io/v2
 kind: CiliumLoadBalancerIPPool
 metadata:
@@ -78,17 +60,3 @@ spec:
           peerAddress: 172.16.0.1
           peerConfigRef:
             name: l3-bgp-peer-config
----
-apiVersion: cilium.io/v2alpha1
-kind: CiliumL2AnnouncementPolicy
-metadata:
-  name: l2-policy
-spec:
-  loadBalancerIPs: true
-  # NOTE: interfaces might need to be set if you have more than one active NIC on your hosts
-  # interfaces:
-  #   - ^eno[0-9]+
-  #   - ^eth[0-9]+
-  nodeSelector:
-    matchLabels:
-      kubernetes.io/os: linux
