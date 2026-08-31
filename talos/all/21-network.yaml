@@ -1,6 +1,8 @@
 machine:
   network:
     disableSearchDomain: true
+    # The node must never depend on in-cluster DNS (Technitium) — it needs
+    # resolution before Cilium/workloads are up (image pulls, NTP, NFS).
     nameservers:
-      - 172.16.0.200
       - 192.168.85.1
+      - 1.1.1.1
