@@ -14,8 +14,9 @@ spec:
     provider:
       name: rfc2136
     env:
+      # In-cluster service name so this never depends on the LB IP
       - name: EXTERNAL_DNS_RFC2136_HOST
-        value: "172.16.0.200"
+        value: "technitium-dns.network.svc.cluster.local"
       - name: EXTERNAL_DNS_RFC2136_PORT
         value: "53"
       - name: EXTERNAL_DNS_RFC2136_ZONE
