@@ -6,7 +6,8 @@ metadata:
   name: qui
 spec:
   components:
-    - ../../../../components/kopiur
+    - ../../../../components/kopiur/backup
+    - ../../../../components/kopiur/restore
   dependsOn:
     - name: openebs
       namespace: openebs-system

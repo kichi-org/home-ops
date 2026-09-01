@@ -6,7 +6,8 @@ metadata:
   name: prowlarr
 spec:
   components:
-    - ../../../../components/kopiur
+    - ../../../../components/kopiur/backup
+    - ../../../../components/kopiur/restore
   dependsOn:
     - name: openebs
       namespace: openebs-system

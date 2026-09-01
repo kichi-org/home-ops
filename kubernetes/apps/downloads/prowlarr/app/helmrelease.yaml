@@ -75,11 +75,7 @@ spec:
             namespace: network
     persistence:
       config:
-        type: persistentVolumeClaim
-        storageClass: openebs-hostpath
-        retain: true
-        accessMode: ReadWriteOnce
-        size: 1Gi
+        existingClaim: prowlarr
         globalMounts:
           - path: /config
       tmp:
