@@ -19,6 +19,8 @@ spec:
       region: auto
   create:
     enabled: true
+  credentialProjection:
+    allowed: true
   encryption:
     passwordSecretRef:
       name: kopiur-repository-secret

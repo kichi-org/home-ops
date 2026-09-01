@@ -6,6 +6,7 @@ metadata:
   name: radarr
 spec:
   components:
+    - ../../../../components/kopiur
     - ../../../../components/volsync
   dependsOn:
     - name: openebs
