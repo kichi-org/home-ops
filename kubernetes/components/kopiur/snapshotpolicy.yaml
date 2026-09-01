@@ -1,0 +1,23 @@
+---
+# yaml-language-server: $schema=https://k8s-schemas.home-operations.com/kopiur.home-operations.com/snapshotpolicy_v1alpha1.json
+apiVersion: kopiur.home-operations.com/v1alpha1
+kind: SnapshotPolicy
+metadata:
+  name: "${APP}"
+spec:
+  repository:
+    kind: ClusterRepository
+    name: r2
+  copyMethod: Direct
+  credentialProjection:
+    enabled: true
+  mover:
+    securityContext:
+      runAsUser: ${VOLSYNC_UID:=1000}
+      runAsGroup: ${VOLSYNC_GID:=1000}
+  sources:
+    - pvc:
+        name: "${APP}"
+  retention:
+    keepDaily: 7
+    keepWeekly: 4

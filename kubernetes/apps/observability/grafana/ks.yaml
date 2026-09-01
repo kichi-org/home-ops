@@ -22,6 +22,7 @@ metadata:
   name: grafana-instance
 spec:
   components:
+    - ../../../../components/kopiur
     - ../../../../components/volsync
   dependsOn:
     - name: grafana
