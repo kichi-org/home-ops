@@ -22,7 +22,7 @@ metadata:
   name: grafana-instance
 spec:
   components:
-    - ../../../../components/kopiur
+    - ../../../../components/kopiur/backup
   dependsOn:
     - name: grafana
     - name: openebs
