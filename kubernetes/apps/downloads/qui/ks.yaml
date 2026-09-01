@@ -7,7 +7,6 @@ metadata:
 spec:
   components:
     - ../../../../components/kopiur
-    - ../../../../components/volsync
   dependsOn:
     - name: openebs
       namespace: openebs-system

@@ -23,7 +23,6 @@ metadata:
 spec:
   components:
     - ../../../../components/kopiur
-    - ../../../../components/volsync
   dependsOn:
     - name: grafana
     - name: openebs

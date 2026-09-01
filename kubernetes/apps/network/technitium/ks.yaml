@@ -7,7 +7,6 @@ metadata:
 spec:
   components:
     - ../../../../components/kopiur
-    - ../../../../components/volsync
   dependsOn:
     - name: openebs
       namespace: openebs-system
@@ -24,6 +23,6 @@ spec:
   postBuild:
     substitute:
       APP: technitium
-      VOLSYNC_UID: "0"
-      VOLSYNC_GID: "0"
+      KOPIUR_UID: "0"
+      KOPIUR_GID: "0"
   wait: false
