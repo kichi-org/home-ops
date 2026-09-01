@@ -7,7 +7,6 @@ resources:
   - ./externalsecret.yaml
   - ./helmrelease.yaml
   - ./ocirepository.yaml
-  - ./prometheusrule-backups.yaml
   # - ./scrapeconfig.yaml
 configMapGenerator:
   - name: flux-metrics-configmap
