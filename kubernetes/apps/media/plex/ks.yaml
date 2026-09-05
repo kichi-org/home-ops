@@ -17,7 +17,6 @@ spec:
   postBuild:
     substitute:
       APP: plex
-      # daily at 04:xx SGT: after the CNPG backup and the kopia full-maintenance window
       KOPIUR_CRON: H 4 * * *
   prune: true
   sourceRef:
