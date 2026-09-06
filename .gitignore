@@ -16,8 +16,7 @@ talosconfig
 __pycache__/
 *.py[cod]
 # Misc.
-.claude/*
-!.claude/skills
+.claude/settings.local.json
 .private/
 .venv/
 .DS_Store
