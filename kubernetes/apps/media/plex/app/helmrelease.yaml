@@ -88,11 +88,7 @@ spec:
                 port: *port
     persistence:
       config:
-        type: persistentVolumeClaim
-        storageClass: openebs-hostpath
-        retain: true
-        accessMode: ReadWriteOnce
-        size: 5Gi
+        existingClaim: plex
         globalMounts:
           - path: /config
       media:

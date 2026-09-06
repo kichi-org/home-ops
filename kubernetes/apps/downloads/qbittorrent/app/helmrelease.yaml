@@ -92,11 +92,7 @@ spec:
             addr = "http://localhost:80"
     persistence:
       config:
-        type: persistentVolumeClaim
-        storageClass: openebs-hostpath
-        retain: true
-        accessMode: ReadWriteOnce
-        size: 1Gi
+        existingClaim: qbittorrent
         globalMounts:
           - path: /config
       config-file:

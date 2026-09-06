@@ -40,4 +40,5 @@ spec:
   postBuild:
     substitute:
       APP: grafana
+      KOPIUR_CAPACITY: 5Gi
   wait: false

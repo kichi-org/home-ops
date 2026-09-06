@@ -23,6 +23,7 @@ spec:
   postBuild:
     substitute:
       APP: technitium
+      KOPIUR_CAPACITY: 2Gi
       KOPIUR_UID: "0"
       KOPIUR_GID: "0"
   wait: false
