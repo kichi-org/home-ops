@@ -85,10 +85,6 @@ spec:
                 port: *port
     persistence:
       config:
-        type: persistentVolumeClaim
-        storageClass: openebs-hostpath
-        retain: true
-        accessMode: ReadWriteOnce
-        size: 2Gi
+        existingClaim: technitium
         globalMounts:
           - path: /etc/dns

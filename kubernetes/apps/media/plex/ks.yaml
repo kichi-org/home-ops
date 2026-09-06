@@ -17,6 +17,7 @@ spec:
   postBuild:
     substitute:
       APP: plex
+      KOPIUR_CAPACITY: 5Gi
       KOPIUR_CRON: H 4 * * *
   prune: true
   sourceRef:
