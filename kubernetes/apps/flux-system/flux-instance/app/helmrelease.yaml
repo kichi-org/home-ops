@@ -22,7 +22,7 @@ spec:
       sync:
         kind: GitRepository
         url: "https://github.com/kichi-org/home-ops.git"
-        ref: "refs/heads/v2"
+        ref: "refs/heads/main"
         path: kubernetes/flux/cluster
       commonMetadata:
         labels:
