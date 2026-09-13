@@ -47,7 +47,7 @@ spec:
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
-                capabilities: {drop: ["ALL"]}
+                capabilities: { drop: ["ALL"] }
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
@@ -57,7 +57,7 @@ spec:
           volumes:
             - name: grafana-data
               persistentVolumeClaim:
-                claimName: grafana-pvc
+                claimName: grafana
   httpRoute:
     spec:
       hostnames:
@@ -69,12 +69,4 @@ spec:
         - backendRefs:
             - name: grafana-service
               port: 3000
-  persistentVolumeClaim:
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      resources:
-        requests:
-          storage: 5Gi
-      storageClassName: longhorn
   disableDefaultSecurityContext: All

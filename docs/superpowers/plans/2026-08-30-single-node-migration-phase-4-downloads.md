@@ -4,7 +4,7 @@
 
 **Goal:** Move the `downloads` namespace (Sonarr, Radarr, Prowlarr, qBittorrent, qui, Recyclarr) to `talos-11` with their configuration intact, qBittorrent back on `172.16.0.123` so the existing UniFi port-forward keeps working, and every config PVC backed up hourly by VolSync from day one.
 
-**Architecture:** Config data is small (~180 MB total) and lives in Helm-managed Longhorn PVCs that **are deleted when the old HelmReleases are uninstalled**, so the copy happens *before* the `main` PR is merged: old apps are scaled to 0 (HelmReleases suspended so Flux does not scale them back), each `/config` is tarred to an NFS staging directory (`kl-san-1:/volume1/data/_migration`), then the `main` PR prunes the old apps. The `v2` PR (merged second) brings the apps up on fresh hostpath PVCs, which are then overwritten from the staging tars with the apps scaled to 0. qBittorrent's `.123` is only enabled on `v2` after the old one is gone (L2 announcement must be unique) — the `v2` pool gets a second block for it.
+**Architecture:** Config data is small (~180 MB total) and lives in Helm-managed Longhorn PVCs that **are deleted when the old HelmReleases are uninstalled**, so the copy happens _before_ the `main` PR is merged: old apps are scaled to 0 (HelmReleases suspended so Flux does not scale them back), each `/config` is tarred to an NFS staging directory (`kl-san-1:/volume1/data/_migration`), then the `main` PR prunes the old apps. The `v2` PR (merged second) brings the apps up on fresh hostpath PVCs, which are then overwritten from the staging tars with the apps scaled to 0. qBittorrent's `.123` is only enabled on `v2` after the old one is gone (L2 announcement must be unique) — the `v2` pool gets a second block for it.
 
 **Tech Stack:** Flux, bjw-s app-template 5.1.0, home-operations images, ESO + 1Password (items `sonarr`, `radarr`, `prowlarr`, `qui`, `recyclarr`), OpenEBS hostpath, VolSync component (`kubernetes/components/volsync`), Cilium LB-IPAM, NFS.
 
@@ -25,13 +25,13 @@
 
 Branch `v2` (worktree `~/repo/kichi-org/home-ops-v2`):
 
-| Path | Responsibility |
-|---|---|
-| `kubernetes/apps/downloads/{namespace,kustomization}.yaml` | namespace + `alerts` component, six `ks.yaml` entries (copied) |
-| `kubernetes/apps/downloads/<app>/ks.yaml` (×6) | deps → `openebs`, `onepassword`; VolSync component for all except `recyclarr` |
-| `kubernetes/apps/downloads/<app>/app/*` (×6) | copied; `storageClass: openebs-hostpath`, `retain: true` on the config PVC |
-| `kubernetes/apps/kube-system/cilium/app/networks.yaml` | pool gains block `172.16.0.123–172.16.0.123` |
-| `docs/superpowers/plans/2026-08-30-single-node-migration-phase-4-downloads.md` | this plan |
+| Path                                                                           | Responsibility                                                                |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `kubernetes/apps/downloads/{namespace,kustomization}.yaml`                     | namespace + `alerts` component, six `ks.yaml` entries (copied)                |
+| `kubernetes/apps/downloads/<app>/ks.yaml` (×6)                                 | deps → `openebs`, `onepassword`; VolSync component for all except `recyclarr` |
+| `kubernetes/apps/downloads/<app>/app/*` (×6)                                   | copied; `storageClass: openebs-hostpath`, `retain: true` on the config PVC    |
+| `kubernetes/apps/kube-system/cilium/app/networks.yaml`                         | pool gains block `172.16.0.123–172.16.0.123`                                  |
+| `docs/superpowers/plans/2026-08-30-single-node-migration-phase-4-downloads.md` | this plan                                                                     |
 
 Branch `main`: delete `kubernetes/apps/downloads/` (whole namespace directory).
 
@@ -83,6 +83,7 @@ EOF
 grep -rn 'longhorn' kubernetes/apps/downloads || echo "no longhorn refs"
 grep -c 'retain: true' kubernetes/apps/downloads/*/app/helmrelease.yaml
 ```
+
 Expected: `no longhorn refs`; each of the six helmreleases reports `1`.
 
 - [ ] **Step 2: Validate builds and that app-template accepts `retain`**
@@ -94,6 +95,7 @@ for a in prowlarr qbittorrent qui radarr recyclarr sonarr; do kubectl kustomize 
 helm template sonarr oci://ghcr.io/bjw-s-labs/helm/app-template --version 5.1.0 -n downloads -f <(yq '.spec.values' kubernetes/apps/downloads/sonarr/app/helmrelease.yaml) | grep -n -B2 -A2 'resource-policy' | head
 kubectl kustomize kubernetes/apps/kube-system/cilium/app | grep -A6 'blocks:'
 ```
+
 Expected: all OK; the rendered PVC carries `helm.sh/resource-policy: keep` (if `helm template` rejects `retain`, remove that line from the six helmreleases — the PVCs then stay Helm-owned, which is what `main` has today); pool shows both blocks.
 
 - [ ] **Step 3: Pre-flight on the new cluster (read-only)**
@@ -103,6 +105,7 @@ cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PA
 for i in sonarr radarr prowlarr qui recyclarr; do op item get $i --vault Kubernetes --format json | jq -r --arg i "$i" '"\($i): " + ([.fields[] | select(.label!="notesPlain" and .label!="password" and .label!="username") | .label] | join(","))'; done
 kubectl get clustersecretstore onepassword --no-headers | awk '{print $1,$3,$5}'
 ```
+
 Expected: each item lists its `*_API_KEY` (qui: whatever `qui/app/externalsecret.yaml` extracts); store Valid. If `op` times out on its auth prompt, skip — the ExternalSecrets will surface a missing field as `SecretSyncedError` in Task 4.
 
 - [ ] **Step 4: Commit, push, open the PR**
@@ -111,6 +114,7 @@ Expected: each item lists its `*_API_KEY` (qui: whatever `qui/app/externalsecret
 cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PATH
 git add kubernetes/apps/downloads kubernetes/apps/kube-system/cilium docs && mise exec -- git commit -q -m "feat(downloads): port arr stack, qbittorrent, qui and recyclarr" && git push -u origin feat/downloads
 ```
+
 GitHub MCP `create_pull_request` (head `feat/downloads`, base `v2`), body: "Phase 4 — enables the downloads namespace on talos-11 (hostpath PVCs with retain, VolSync on all config PVCs, qBittorrent pinned to .123 via a new pool block). Merge only after the `main` removal PR has pruned the old apps (plan Task 3)." **Do not merge yet.**
 
 ### Task 2: Freeze the old apps and stage their configs on the NAS
@@ -118,6 +122,7 @@ GitHub MCP `create_pull_request` (head `feat/downloads`, base `v2`), body: "Phas
 **Files:** none in git. Output: `/volume1/data/_migration/{sonarr,radarr,prowlarr,qbittorrent,qui}.tar`.
 
 **Interfaces:**
+
 - Consumes: old cluster PVCs `downloads/<app>` (Longhorn RWO), NFS `kl-san-1.localdomain:/volume1/data`.
 - Produces: one tar per app containing the contents of `/config` (relative paths), owned by uid 1000.
 
@@ -130,6 +135,7 @@ for a in sonarr radarr prowlarr qui qbittorrent; do kubectl -n downloads scale d
 until ! kubectl -n downloads get pods --no-headers | grep -vE 'recyclarr' | grep -q .; do sleep 5; done; echo "old downloads apps stopped $(date +%T)"
 kubectl -n downloads get pvc --no-headers | awk '{print $1,$2}'
 ```
+
 Expected: five `suspended`, five `scaled`, only the completed `recyclarr-*` job pod remains; PVCs still Bound. Record the timestamp — start of the downloads outage.
 
 - [ ] **Step 2: Tar each config PVC to NFS with a helper pod (one pod per app; Longhorn RWO attaches to the helper now that the app is gone)**
@@ -156,6 +162,7 @@ EOF
 done
 for a in sonarr radarr prowlarr qui qbittorrent; do kubectl -n downloads wait pod/stage-$a --for=jsonpath='{.status.phase}'=Succeeded --timeout=300s >/dev/null && echo "== $a" && kubectl -n downloads logs stage-$a; done
 ```
+
 Expected: each pod ends `Succeeded`; sizes ≈ sonarr 43 M, radarr 58 M, prowlarr 56 M, qui 3.5 M, qbittorrent 16 M (tar sizes slightly larger); file counts > 0. If a pod stays `Pending` with a Longhorn "volume is attached to another node" event, wait — the detach from the old app node takes up to a minute.
 
 - [ ] **Step 3: Verify the tars are readable from the new cluster (proves the NFS path end-to-end) and clean up the helper pods**
@@ -165,6 +172,7 @@ cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PA
 kubectl run stagecheck --rm -i --restart=Never --image=busybox:1.36 --overrides='{"spec":{"containers":[{"name":"c","image":"busybox:1.36","command":["sh","-c","ls -l /nfs/_migration && for f in /nfs/_migration/*.tar; do tar -tf $f >/dev/null && echo \"ok $f\"; done"],"volumeMounts":[{"name":"nfs","mountPath":"/nfs"}]}],"volumes":[{"name":"nfs","nfs":{"server":"kl-san-1.localdomain","path":"/volume1/data"}}]}}' 2>&1 | grep -vE '^pod |warning|If you'
 cd ~/repo/kichi-org/home-ops && export KUBECONFIG=$PWD/kubeconfig && kubectl -n downloads delete pod stage-sonarr stage-radarr stage-prowlarr stage-qui stage-qbittorrent
 ```
+
 Expected: five `ok` lines from the new cluster; helper pods deleted. **Do not proceed to Task 3 until all five are `ok`.**
 
 ### Task 3: Remove the namespace from the old cluster (`main` PR, merged first)
@@ -180,6 +188,7 @@ git commit -q -m "chore(downloads): move to the new cluster"
 git push -u origin chore/downloads-cutover
 git checkout -q main && git stash pop -q 2>/dev/null || true
 ```
+
 GitHub MCP `create_pull_request` (head `chore/downloads-cutover`, base `main`), body: "Phase 4 — removes the downloads namespace from the old cluster (configs already staged on the NAS). `v2` PR #PR_V2 enables it on talos-11 afterwards. Merge this one first." Record as `PR_MAIN`.
 
 - [ ] **Step 2: Calvin merges `PR_MAIN`; watch the prune (suspended HelmReleases still get uninstalled by prune because the Kustomization deletes the HelmRelease objects)**
@@ -191,6 +200,7 @@ until ! kubectl -n downloads get helmrelease --no-headers 2>/dev/null | grep -q 
 kubectl -n downloads get pvc,svc --no-headers 2>&1 | head
 kubectl -n downloads get svc qbittorrent-bittorrent 2>&1 | tail -1
 ```
+
 Expected: HelmReleases gone; PVCs deleted with them (the tars on the NAS are now the only copy — that is why Task 2 Step 3 gates this); `qbittorrent-bittorrent` Service NotFound → `.123` is no longer announced. If a HelmRelease lingers in `Uninstalling` because it is suspended, `flux -n downloads resume helmrelease <app>` and it finishes.
 
 ### Task 4: Enable on the new cluster and restore the configs (merge `PR_V2`)
@@ -207,6 +217,7 @@ kubectl -n downloads get pods,pvc --no-headers | awk '{print $1,$2,$3}'
 kubectl -n downloads get svc qbittorrent-bittorrent -o jsonpath='{.status.loadBalancer.ingress[0].ip}{"\n"}'
 kubectl -n downloads get externalsecret --no-headers | awk '{print $1,$5,$6}'
 ```
+
 Expected: five deployments Running (fresh config), five PVCs Bound on `openebs-hostpath`, recyclarr CronJob created; `qbittorrent-bittorrent` on `172.16.0.123`; all ExternalSecrets `SecretSynced True`.
 
 - [ ] **Step 2: Scale to 0 and restore each config from the staged tar (wipe first, then untar)**
@@ -238,6 +249,7 @@ kubectl -n downloads delete pod restore-sonarr restore-radarr restore-prowlarr r
 for a in sonarr radarr prowlarr qui qbittorrent; do flux -n downloads resume helmrelease $a; done
 kubectl -n downloads get pods --no-headers | awk '{print $1,$2,$3}'
 ```
+
 Expected: each restore prints the old size and familiar files (`config.xml`, `*.db` for *arr; `qBittorrent/` for qbittorrent; `qui.db`/`config.toml` for qui); resuming the HelmReleases scales the deployments back to 1 (Helm reconciles `replicas: 1`); if a deployment stays at 0, `kubectl -n downloads scale deploy/$a --replicas=1`.
 
 - [ ] **Step 3: Functional checks**
@@ -256,6 +268,7 @@ curl -sk --resolve prowlarr.kichi.live:443:172.16.0.31 -H "X-Api-Key: $KEY" http
 kubectl -n downloads exec deploy/qbittorrent -c app -- sh -c 'wget -qO- http://localhost:80/api/v2/torrents/info' | jq 'length'
 nc -z -w2 172.16.0.123 50469 && echo "qbittorrent .123:50469 open"
 ```
+
 Expected: five `http=200/302`; Sonarr series count and Radarr movie count > 0 (library restored), root folders `accessible=true` (NFS `/data`); Prowlarr indexers > 0; qBittorrent lists its torrents; `.123:50469` open (UniFi forward unchanged). If the `*_API_KEY` from 1Password differs from the one in the restored `config.xml`, the `*ARR__AUTH__APIKEY` env var wins and the API calls above still work — then check the Prowlarr → Sonarr/Radarr app links in Prowlarr's UI match (they use the same keys).
 
 - [ ] **Step 4: VolSync first sync**
@@ -267,6 +280,7 @@ for a in sonarr radarr prowlarr qui qbittorrent; do kubectl -n downloads patch r
 until [ "$(kubectl -n downloads get replicationsource -o jsonpath='{range .items[*]}{.status.lastManualSync}{"\n"}{end}' | grep -c initial)" = "5" ]; do sleep 15; done
 kubectl -n downloads get replicationsource -o jsonpath='{range .items[*]}{.metadata.name} {.status.latestMoverStatus.result} {.status.lastSyncTime}{"\n"}{end}'
 ```
+
 Expected: five `Successful` syncs; R2 now holds `volsync/{sonarr,radarr,prowlarr,qui,qbittorrent}/`.
 
 - [ ] **Step 5: Recyclarr dry run**
@@ -276,6 +290,7 @@ cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PA
 kubectl -n downloads create job --from=cronjob/recyclarr recyclarr-manual && kubectl -n downloads wait job/recyclarr-manual --for=condition=complete --timeout=300s && kubectl -n downloads logs job/recyclarr-manual --tail=15
 kubectl -n downloads delete job recyclarr-manual
 ```
+
 Expected: recyclarr syncs custom formats/quality profiles to the new Sonarr/Radarr without errors.
 
 ### Task 5: Close out
@@ -286,6 +301,7 @@ Expected: recyclarr syncs custom formats/quality profiles to the new Sonarr/Rada
 cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PATH KUBECONFIG=$PWD/kubeconfig
 kubectl run stageclean --rm -i --restart=Never --image=busybox:1.36 --overrides='{"spec":{"securityContext":{"runAsUser":1000,"fsGroup":1000},"containers":[{"name":"c","image":"busybox:1.36","command":["sh","-c","rm -rf /nfs/_migration && ls /nfs | grep -c _migration || echo staging removed"],"volumeMounts":[{"name":"nfs","mountPath":"/nfs"}]}],"volumes":[{"name":"nfs","nfs":{"server":"kl-san-1.localdomain","path":"/volume1/data"}}]}}' 2>&1 | grep -vE '^pod |warning|If you'
 ```
+
 Expected: `staging removed`. (Only after Task 4 Step 4 shows VolSync copies in R2.)
 
 - [ ] **Step 2: Execution log** on `v2` and `main` (`docs(plan): phase 4 execution log`), push both (background the pushes).
@@ -303,6 +319,7 @@ Expected: `staging removed`. (Only after Task 4 Step 4 shows VolSync copies in R
 - Date completed: 2026-08-30
 
 Deviations:
+
 - Deleting the `main` Kustomizations while the HelmReleases were **suspended** removed the HelmRelease objects without running `helm uninstall` — Deployments, Services (incl. `.123`) and PVCs were orphaned. Fixed by deleting the whole `downloads` namespace on the old cluster. Rule: resume HelmReleases before the prune, or plan to delete the namespace.
 - After `flux resume`, Helm did not scale the deployments back from 0 (no drift correction) — `kubectl scale --replicas=1` was needed.
 - recyclarr is a CronJob, so its `WaitForFirstConsumer` PVC never bound and the Helm install timed out; its config is a regenerable cache → switched to `emptyDir` (no VolSync for recyclarr, as planned).

@@ -4,7 +4,7 @@
 
 **Goal:** Move Plex (with its 1.4 GB metadata, no rescan), the Cloudflare Tunnel `kubernetes` and the Cloudflare `external-dns` from the old cluster to `talos-11`; keep `plex.kichi.live` on the tunnel; add the direct-stream path (`plex-direct.kichi.live`, WAN 32400 → `172.16.0.128`); drop the `echo` canary.
 
-**Architecture:** Same two-PR pattern (`main` removes first, `v2` enables second) because the tunnel and the external-dns owner `default` are singletons: two `cloudflared` on one tunnel would load-balance between clusters, and two external-dns with the same owner would fight over records. The Plex config PVC is Helm-owned on the old cluster, so it is tarred to NFS staging before the `main` merge and restored onto the new hostpath PVC after the `v2` merge. The Cloudflare/UniFi prep (grey `plex-direct` A record, DDNS repoint, 32400 forward) is done *before* the cutover — `.128` is the same on both clusters, so it is safe and testable against the old Plex.
+**Architecture:** Same two-PR pattern (`main` removes first, `v2` enables second) because the tunnel and the external-dns owner `default` are singletons: two `cloudflared` on one tunnel would load-balance between clusters, and two external-dns with the same owner would fight over records. The Plex config PVC is Helm-owned on the old cluster, so it is tarred to NFS staging before the `main` merge and restored onto the new hostpath PVC after the `v2` merge. The Cloudflare/UniFi prep (grey `plex-direct` A record, DDNS repoint, 32400 forward) is done _before_ the cutover — `.128` is the same on both clusters, so it is safe and testable against the old Plex.
 
 **Tech Stack:** Flux, app-template 5.1.0, `ghcr.io/home-operations/plex:1.43.3`, cloudflared 2026.8.2, external-dns 1.21.1 (cloudflare provider), SOPS/age (existing secrets reused), OpenEBS hostpath, VolSync, Cilium LB-IPAM, Cloudflare API (MCP), UniFi API (MCP, preview → confirm).
 
@@ -24,15 +24,15 @@
 
 Branch `v2`:
 
-| Path | Responsibility |
-|---|---|
-| `kubernetes/apps/media/{namespace,kustomization}.yaml` | namespace (`alerts` component), `./plex/ks.yaml` |
-| `kubernetes/apps/media/plex/ks.yaml` | deps `openebs`, `onepassword`; VolSync component, `APP: plex` |
-| `kubernetes/apps/media/plex/app/*` | copied; `openebs-hostpath` + `retain: true`; `PLEX_ADVERTISE_URL` unchanged (direct path skipped) |
+| Path                                                        | Responsibility                                                                                                |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `kubernetes/apps/media/{namespace,kustomization}.yaml`      | namespace (`alerts` component), `./plex/ks.yaml`                                                              |
+| `kubernetes/apps/media/plex/ks.yaml`                        | deps `openebs`, `onepassword`; VolSync component, `APP: plex`                                                 |
+| `kubernetes/apps/media/plex/app/*`                          | copied; `openebs-hostpath` + `retain: true`; `PLEX_ADVERTISE_URL` unchanged (direct path skipped)             |
 | `kubernetes/apps/network/cloudflare-tunnel/{ks.yaml,app/*}` | copied verbatim from `main` incl. `secret.sops.yaml` (tunnel token) and the `external.kichi.live` DNSEndpoint |
-| `kubernetes/apps/network/cloudflare-dns/{ks.yaml,app/*}` | copied verbatim incl. `secret.sops.yaml` (API token), owner `default` |
-| `kubernetes/apps/network/kustomization.yaml` | + `cloudflare-dns/ks.yaml`, `cloudflare-tunnel/ks.yaml` |
-| `kubernetes/apps/kube-system/cilium/app/networks.yaml` | + block `172.16.0.128–172.16.0.128` |
+| `kubernetes/apps/network/cloudflare-dns/{ks.yaml,app/*}`    | copied verbatim incl. `secret.sops.yaml` (API token), owner `default`                                         |
+| `kubernetes/apps/network/kustomization.yaml`                | + `cloudflare-dns/ks.yaml`, `cloudflare-tunnel/ks.yaml`                                                       |
+| `kubernetes/apps/kube-system/cilium/app/networks.yaml`      | + block `172.16.0.128–172.16.0.128`                                                                           |
 
 Branch `main`: delete `kubernetes/apps/media/plex/`, `kubernetes/apps/network/cloudflare-tunnel/`, `kubernetes/apps/network/cloudflare-dns/`, `kubernetes/apps/default/echo/`; drop their lines from the three `kustomization.yaml`s.
 
@@ -91,6 +91,7 @@ sops decrypt kubernetes/apps/network/cloudflare-dns/app/secret.sops.yaml | yq -r
 for d in media media/plex/app network network/cloudflare-tunnel/app network/cloudflare-dns/app kube-system/cilium/app; do kubectl kustomize kubernetes/apps/$d >/dev/null && echo "OK $d"; done
 grep -rn 'longhorn' kubernetes/apps/media kubernetes/apps/network/cloudflare-* || echo "no longhorn refs"
 ```
+
 Expected: `TUNNEL_TOKEN` and `api-token` decrypt with the v2 `age.key` (same recipient); all builds OK; no longhorn refs. The tunnel's `grafanadashboard.yaml` needs the Grafana CRDs — present on `v2`.
 
 - [ ] **Step 2: Commit, push, open PR (base `v2`)** — `feat(media): port plex, cloudflare tunnel and external-dns`. Record `PR_V2`. **Do not merge yet.**
@@ -127,6 +128,7 @@ kubectl -n media wait pod/stage-plex --for=jsonpath='{.status.phase}'=Succeeded 
 cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PATH KUBECONFIG=$PWD/kubeconfig
 kubectl run stagecheck --rm -i --restart=Never --image=busybox:1.36 --overrides='{"spec":{"containers":[{"name":"c","image":"busybox:1.36","command":["sh","-c","ls -l /nfs/_migration && tar -tf /nfs/_migration/plex.tar >/dev/null && echo ok plex.tar"],"volumeMounts":[{"name":"nfs","mountPath":"/nfs"}]}],"volumes":[{"name":"nfs","nfs":{"server":"kl-san-1.localdomain","path":"/volume1/data"}}]}}' 2>&1 | grep -vE '^pod |warning|If you|recorded'
 ```
+
 Expected: tar ≈ 1.4 GB, thousands of entries; `ok plex.tar` from talos-11. Record the stop time (start of the Plex outage).
 
 ### Task 4: Remove Plex, tunnel, external-dns and echo from the old cluster (`main` PR, merged first)
@@ -146,6 +148,7 @@ git add kubernetes && git commit -q -m "chore: move plex, cloudflare tunnel and 
 git push -u origin chore/plex-cloudflare-cutover
 git checkout -q main && git stash pop -q 2>/dev/null || true
 ```
+
 GitHub MCP `create_pull_request` (base `main`). Record `PR_MAIN`. Note: if `kubernetes/apps/media/kustomization.yaml` ends up with only `namespace.yaml`, that is fine (namespace stays until step 9).
 
 - [ ] **Step 2: Calvin merges `PR_MAIN`; watch the prune and the tunnel**
@@ -157,6 +160,7 @@ until ! kubectl get helmrelease -A --no-headers | grep -E 'plex|cloudflare-tunne
 kubectl get svc -A --no-headers | grep -c '172.16.0.128' || echo ".128 released"
 kubectl -n media get pvc plex 2>&1 | tail -1
 ```
+
 Cloudflare (GET): `cloudflare.request({method:"GET", path:"/accounts/932a695a6a0d664160ac575fa0e4fda8/cfd_tunnel/9c7a341c-700f-4141-916d-ded983d0b1ae/connections"})` → expected `[]` (no connectors). DNS records `plex`, `flux-webhook`, `external` still exist (external-dns does not clean up on delete); `echo` still exists until the new external-dns removes it. If any HelmRelease is stuck (suspended at deletion), delete the leftover objects by hand as in phase 4.
 
 ### Task 5: Enable on the new cluster and restore Plex (merge `PR_V2`)
@@ -191,6 +195,7 @@ EOF
 kubectl -n media wait pod/restore-plex --for=jsonpath='{.status.phase}'=Succeeded --timeout=900s && kubectl -n media logs restore-plex && kubectl -n media delete pod restore-plex
 flux -n media resume helmrelease plex >/dev/null; kubectl -n media scale deploy/plex --replicas=1; kubectl -n media rollout status deploy/plex --timeout=300s | tail -1
 ```
+
 Expected: cloudflared + external-dns Running, `plex LB=172.16.0.128`, restore prints ≈1.4G with `Metadata`, `Plug-in Support`, `Preferences.xml`; Plex rolls out. Record the time (end of the Plex outage).
 
 - [ ] **Step 2: Verify tunnel, DNS and Plex**
@@ -204,6 +209,7 @@ TOKEN=$(kubectl -n media exec deploy/plex -c app -- sh -c "grep -o 'PlexOnlineTo
 curl -s "http://172.16.0.128:32400/library/sections?X-Plex-Token=$TOKEN" | grep -oE 'title="[^"]+"' | head
 kubectl -n network logs deploy/cloudflare-dns --since=10m | grep -iE 'echo|Desired change|error' | head -8
 ```
+
 Expected: `plex via tunnel http=200`, `.128 http=200`, flux-webhook 404/405 (reachable); the library sections list the existing libraries (no rescan needed); external-dns logs show `DELETE echo.kichi.live` (canary gone) and no errors. Cloudflare GET on the tunnel connections → 1+ connector from the new cluster. Calvin: open Plex → Settings → Remote Access → set manual port 32400 → expect "Fully accessible outside your network" (uses the 32400 forward); play something remotely if possible.
 
 - [ ] **Step 3: VolSync first sync, staging cleanup**
@@ -215,6 +221,7 @@ until [ "$(kubectl -n media get replicationsource plex -o jsonpath='{.status.las
 kubectl -n media get replicationsource plex -o jsonpath='{.status.latestMoverStatus.result} {.status.lastSyncTime}{"\n"}'
 kubectl run stageclean --rm -i --restart=Never --image=busybox:1.36 --overrides='{"spec":{"securityContext":{"runAsUser":1000,"fsGroup":1000},"containers":[{"name":"c","image":"busybox:1.36","command":["sh","-c","rm -rf /nfs/_migration && echo staging removed"],"volumeMounts":[{"name":"nfs","mountPath":"/nfs"}]}],"volumes":[{"name":"nfs","nfs":{"server":"kl-san-1.localdomain","path":"/volume1/data"}}]}}' 2>&1 | grep -vE '^pod |warning|If you|recorded'
 ```
+
 Expected: `Successful`; R2 usage check afterwards (1.4 GB Plex + ~0.6 GB others + CNPG — well under 10 GB, but note it in the log).
 
 ### Task 6: Close out
@@ -233,5 +240,6 @@ Expected: `Successful`; R2 usage check afterwards (1.4 GB Plex + ~0.6 GB others 
 - Date completed: 2026-08-31 00:10 (+08)
 
 Deviations:
+
 - `v2` lacked the `DNSEndpoint` CRD (its bootstrap `crds.yaml` had `cloudflare-dns` removed in phase 0), so the `cloudflare-tunnel` Kustomization failed its dry-run; while it was down the new external-dns deleted `external.kichi.live` (owner `default`, no DNSEndpoint) and recreated it once the CRD existed. Fixed with `crd.create: true` on external-dns + `dependsOn: cloudflare-dns` on the tunnel.
 - LAN split-DNS (old k8s-gateway/Technitium) still resolves `plex.kichi.live` to the old envoy-external `.13` → 404 from LAN browsers until step 7; Plex apps on the LAN reach `.128` directly.

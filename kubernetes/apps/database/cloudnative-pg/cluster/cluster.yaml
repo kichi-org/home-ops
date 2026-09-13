@@ -8,15 +8,25 @@ metadata:
     # required for seamless bootstrap: https://github.com/cloudnative-pg/cloudnative-pg/issues/5778#issuecomment-2783417464
     cnpg.io/skipEmptyWalArchiveCheck: "enabled"
 spec:
-  # using only 1 replica: very difficult to drain the node where postgres is running
-  # using more than 1 replica: write amplification issues when leveraging replicated storage (e.g. ceph)
-  instances: 2
+  instances: 1
   imageName: ghcr.io/cloudnative-pg/postgresql:18.1-202512290807-standard-trixie@sha256:f445b2f8e9b4b3b9a4df56d944c976a2d7eb9b50280f3a6986b0fc7c422f7f27
   primaryUpdateStrategy: unsupervised
 
+  bootstrap:
+    recovery:
+      source: postgres-v1
+
+  externalClusters:
+    - name: postgres-v1
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: r2
+          serverName: postgres
+
   storage:
-    size: 5Gi
-    storageClass: longhorn
+    size: 10Gi
+    storageClass: openebs-hostpath
 
   enableSuperuserAccess: true
   superuserSecret:
@@ -31,8 +41,14 @@ spec:
 
   monitoring:
     enablePodMonitor: true
-  # https://github.com/cloudnative-pg/cloudnative-pg/issues/2570
   enablePDB: false
+
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: r2
+        serverName: postgres-v2
 
   resources:
     requests:
@@ -40,4 +56,3 @@ spec:
       cpu: "250m"
     limits:
       memory: "2Gi"
-

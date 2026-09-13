@@ -1,23 +1,62 @@
 ---
-apiVersion: cilium.io/v2alpha1
+# Routed pool: not a VLAN subnet, reachable only via the BGP /32s the UCG
+# learns from Cilium.
+apiVersion: cilium.io/v2
 kind: CiliumLoadBalancerIPPool
 metadata:
-  name: pool
+  name: pool-bgp
 spec:
   allowFirstLastIPs: "No"
   blocks:
-    - cidr: "172.16.0.0/24"
+    - cidr: "172.16.20.0/24"
 ---
-apiVersion: cilium.io/v2alpha1
-kind: CiliumL2AnnouncementPolicy
+apiVersion: cilium.io/v2
+kind: CiliumBGPAdvertisement
 metadata:
-  name: l2-policy
+  name: l3-bgp-advertisement
+  labels:
+    advertise: bgp
 spec:
-  loadBalancerIPs: true
-  # NOTE: interfaces might need to be set if you have more than one active NIC on your hosts
-  # interfaces:
-  #   - ^eno[0-9]+
-  #   - ^eth[0-9]+
+  advertisements:
+    - advertisementType: Service
+      service:
+        addresses:
+          - LoadBalancerIP
+      selector: # announce all LoadBalancer services
+        matchExpressions:
+          - { key: somekey, operator: NotIn, values: ["never-used-value"] }
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPPeerConfig
+metadata:
+  name: l3-bgp-peer-config
+spec:
+  # Keep routes on the UCG while the agent restarts (Cilium upgrades) —
+  # on a single node fast withdrawal buys nothing, staying reachable does.
+  gracefulRestart:
+    enabled: true
+    restartTimeSeconds: 15
+  families:
+    - afi: ipv4
+      safi: unicast
+      advertisements:
+        matchLabels:
+          advertise: bgp
+---
+apiVersion: cilium.io/v2
+kind: CiliumBGPClusterConfig
+metadata:
+  name: l3-bgp-cluster-config
+spec:
   nodeSelector:
     matchLabels:
       kubernetes.io/os: linux
+  bgpInstances:
+    - name: cilium
+      localASN: 64514
+      peers:
+        - name: unifi
+          peerASN: 64513
+          peerAddress: 172.16.0.1
+          peerConfigRef:
+            name: l3-bgp-peer-config

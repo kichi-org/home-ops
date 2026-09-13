@@ -5,6 +5,9 @@ kind: Kustomization
 metadata:
   name: grafana
 spec:
+  dependsOn:
+    - name: onepassword
+      namespace: external-secrets
   interval: 1h
   path: ./kubernetes/apps/observability/grafana/app
   prune: true
@@ -21,10 +24,14 @@ kind: Kustomization
 metadata:
   name: grafana-instance
 spec:
+  components:
+    - ../../../../components/kopiur/backup
   dependsOn:
     - name: grafana
-    - name: longhorn
-      namespace: longhorn-system
+    - name: openebs
+      namespace: openebs-system
+    - name: onepassword
+      namespace: external-secrets
   interval: 1h
   path: ./kubernetes/apps/observability/grafana/instance
   prune: true
@@ -33,4 +40,8 @@ spec:
     name: flux-system
     namespace: flux-system
   targetNamespace: observability
+  postBuild:
+    substitute:
+      APP: grafana
+      KOPIUR_CAPACITY: 5Gi
   wait: false

@@ -31,7 +31,7 @@ spec:
         storage:
           volumeClaimTemplate:
             spec:
-              storageClassName: longhorn
+              storageClassName: openebs-hostpath
               resources:
                 requests:
                   storage: 1Gi
@@ -58,7 +58,7 @@ spec:
         scrapeConfigSelectorNilUsesHelmValues: false
         serviceMonitorSelectorNilUsesHelmValues: false
         retention: 7d
-        retentionSize: 16GB
+        retentionSize: 15GB
         resources:
           requests:
             cpu: 100m
@@ -67,7 +67,7 @@ spec:
         storageSpec:
           volumeClaimTemplate:
             spec:
-              storageClassName: longhorn
+              storageClassName: openebs-hostpath
               resources:
                 requests:
                   storage: 20Gi
@@ -75,6 +75,34 @@ spec:
       fullnameOverride: node-exporter
     kube-state-metrics:
       fullnameOverride: kube-state-metrics
+      rbac:
+        extraRules:
+          - apiGroups: ["postgresql.cnpg.io"]
+            resources: ["backups"]
+            verbs: ["list", "watch"]
+      customResourceState:
+        enabled: true
+        config:
+          kind: CustomResourceStateMetrics
+          spec:
+            resources:
+              - groupVersionKind:
+                  group: postgresql.cnpg.io
+                  version: v1
+                  kind: Backup
+                metricNamePrefix: cnpg_backup
+                labelsFromPath:
+                  name: [metadata, name]
+                  namespace: [metadata, namespace]
+                  cluster: [spec, cluster, name]
+                  phase: [status, phase]
+                metrics:
+                  - name: stopped_at
+                    help: Completion timestamp (unix seconds) of a CNPG Backup
+                    each:
+                      type: Gauge
+                      gauge:
+                        path: [status, stoppedAt]
     grafana:
       enabled: false
       forceDeployDashboards: true

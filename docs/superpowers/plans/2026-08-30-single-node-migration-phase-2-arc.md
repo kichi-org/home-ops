@@ -25,16 +25,16 @@
 
 Branch `v2` (worktree `~/repo/kichi-org/home-ops-v2`):
 
-| Path | Responsibility |
-|---|---|
-| `kubernetes/apps/actions-runner-system/namespace.yaml` | namespace (copied from `main`) |
-| `kubernetes/apps/actions-runner-system/kustomization.yaml` | namespace kustomization, `alerts` component |
-| `kubernetes/apps/actions-runner-system/actions-runner-controller/ks.yaml` | two Flux Kustomizations: `actions-runner-controller` (depends on `onepassword`), `actions-runner-controller-runners` (depends on controller + `openebs`) |
-| `.../actions-runner-controller/app/{kustomization,ocirepository,helmrelease}.yaml` | controller chart 0.14.2 (copied verbatim) |
-| `.../actions-runner-controller/runners/kustomization.yaml` | lists `./home-ops`, `./home-labs` |
-| `.../runners/home-ops/{externalsecret,helmrelease,kustomization,ocirepository,rbac}.yaml` | `home-ops-runner` scale set; ExternalSecret `home-ops-runner-secret` from item `actions-runner`; storageClass swapped |
-| `.../runners/home-labs/{helmrelease,kustomization,rbac}.yaml` | `home-labs-runner` scale set (+ NFS `/mnt/data`); storageClass swapped |
-| `docs/superpowers/plans/2026-08-30-single-node-migration-phase-2-arc.md` | this plan (copied so it survives `v2 → main`) |
+| Path                                                                                      | Responsibility                                                                                                                                           |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kubernetes/apps/actions-runner-system/namespace.yaml`                                    | namespace (copied from `main`)                                                                                                                           |
+| `kubernetes/apps/actions-runner-system/kustomization.yaml`                                | namespace kustomization, `alerts` component                                                                                                              |
+| `kubernetes/apps/actions-runner-system/actions-runner-controller/ks.yaml`                 | two Flux Kustomizations: `actions-runner-controller` (depends on `onepassword`), `actions-runner-controller-runners` (depends on controller + `openebs`) |
+| `.../actions-runner-controller/app/{kustomization,ocirepository,helmrelease}.yaml`        | controller chart 0.14.2 (copied verbatim)                                                                                                                |
+| `.../actions-runner-controller/runners/kustomization.yaml`                                | lists `./home-ops`, `./home-labs`                                                                                                                        |
+| `.../runners/home-ops/{externalsecret,helmrelease,kustomization,ocirepository,rbac}.yaml` | `home-ops-runner` scale set; ExternalSecret `home-ops-runner-secret` from item `actions-runner`; storageClass swapped                                    |
+| `.../runners/home-labs/{helmrelease,kustomization,rbac}.yaml`                             | `home-labs-runner` scale set (+ NFS `/mnt/data`); storageClass swapped                                                                                   |
+| `docs/superpowers/plans/2026-08-30-single-node-migration-phase-2-arc.md`                  | this plan (copied so it survives `v2 → main`)                                                                                                            |
 
 Branch `main` (`~/repo/kichi-org/home-ops`): delete `kubernetes/apps/actions-runner-system/` (whole directory). Flux `prune: true` on `cluster-apps` removes the namespace's Kustomizations, and their own `prune: true` removes the HelmReleases, so GitHub deregisters the scale sets.
 
@@ -55,6 +55,7 @@ cp -R ../home-ops/kubernetes/apps/actions-runner-system kubernetes/apps/actions-
 cp ../home-ops/docs/superpowers/plans/2026-08-30-single-node-migration-phase-2-arc.md docs/superpowers/plans/
 find kubernetes/apps/actions-runner-system -type f | wc -l
 ```
+
 Expected: `15` files.
 
 - [ ] **Step 2: Swap the StorageClass and the Flux dependencies**
@@ -92,6 +93,7 @@ EOF
 grep -rn 'longhorn' kubernetes/apps/actions-runner-system || echo "no longhorn refs"
 grep -n -A3 'dependsOn' kubernetes/apps/actions-runner-system/actions-runner-controller/ks.yaml
 ```
+
 Expected: `no longhorn refs`; the controller depends on `onepassword`, the runners on `actions-runner-controller` + `openebs`. The namespace `kustomization.yaml` already carries `components: [../../components/alerts]` — keep it.
 
 - [ ] **Step 3: Validate the build and the chart values**
@@ -101,6 +103,7 @@ cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PA
 for d in actions-runner-system actions-runner-system/actions-runner-controller/app actions-runner-system/actions-runner-controller/runners; do kubectl kustomize kubernetes/apps/$d >/dev/null && echo "OK $d"; done
 kubectl kustomize kubernetes/apps/actions-runner-system/actions-runner-controller/runners | grep -E 'kind:|storageClassName|githubConfigUrl|name: home-' | sort | uniq -c
 ```
+
 Expected: three `OK`; two HelmReleases, two `storageClassName: openebs-hostpath`, `githubConfigUrl` for both repos, RBAC objects for `home-ops-runner` and `home-labs-runner`.
 
 - [ ] **Step 4: Confirm the new cluster has what the runners need (pre-flight, read-only)**
@@ -112,6 +115,7 @@ kubectl get clustersecretstore onepassword --no-headers
 op item get actions-runner --vault Kubernetes --format json | jq -r '.fields[] | select(.label|test("ACTIONS_RUNNER")) | .label'
 kubectl run nfsprobe --rm -i --restart=Never --image=busybox:1.36 --overrides='{"spec":{"containers":[{"name":"n","image":"busybox:1.36","command":["sh","-c","ls /mnt/data | head -3"],"volumeMounts":[{"name":"d","mountPath":"/mnt/data"}]}],"volumes":[{"name":"d","nfs":{"server":"kl-san-1.localdomain","path":"/volume1/data"}}]}}' 2>&1 | grep -v '^pod '
 ```
+
 Expected: the Talos `ServiceAccount` CRD exists (from `kubernetesTalosAPIAccess`), store `Valid`, the three `ACTIONS_RUNNER_*` fields are present, and the NFS probe lists directories (proves `kl-san-1.localdomain` resolves and the export accepts `.111`).
 
 - [ ] **Step 5: Commit, push, open the PR against `v2`**
@@ -120,6 +124,7 @@ Expected: the Talos `ServiceAccount` CRD exists (from `kubernetesTalosAPIAccess`
 cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PATH
 git add kubernetes/apps/actions-runner-system docs && mise exec -- git commit -q -m "feat(actions-runner-controller): port runners to the new cluster" && git push -u origin feat/arc
 ```
+
 Then GitHub MCP `create_pull_request` (owner `kichi-org`, repo `home-ops`, head `feat/arc`, **base `v2`**), body: "Phase 2 of the single-node migration — enables ARC on talos-11. Merge only after the `main` removal PR has pruned the old scale sets (see plan Task 2)." Record the PR number as `PR_V2`.
 Expected: PR open, `flate` check green. **Do not merge yet.**
 
@@ -137,6 +142,7 @@ kubectl -n actions-runner-system get helmrelease,pods --no-headers | awk '{print
 TOKEN=$(jq -r .env.GITHUB_PERSONAL_ACCESS_TOKEN ~/.claude/settings.json)
 for r in home-ops home-labs; do curl -s -H "Authorization: Bearer $TOKEN" "https://api.github.com/repos/kichi-org/$r/actions/runners" | jq -r --arg r "$r" '"\($r): \(.total_count) runner(s) \([.runners[].name] | join(","))"'; done
 ```
+
 Expected: two HelmReleases, controller + two listener pods; runner counts ≥ 0 (scale sets show as runners only while a job runs, listeners always exist).
 
 - [ ] **Step 2: Branch, delete, PR**
@@ -150,6 +156,7 @@ git commit -q -m "chore(actions-runner-controller): move runners to the new clus
 git push -u origin chore/arc-cutover
 git checkout -q main && git stash pop -q 2>/dev/null || true
 ```
+
 GitHub MCP `create_pull_request` (head `chore/arc-cutover`, base `main`), body: "Phase 2 of the single-node migration — removes ARC from the old cluster; the `v2` PR (#PR_V2) enables it on talos-11 once this is pruned." Record as `PR_MAIN`.
 Expected: `flux-local` diff comment shows only deletions under `actions-runner-system`.
 
@@ -163,6 +170,7 @@ until ! kubectl -n actions-runner-system get pods --no-headers 2>/dev/null | gre
 TOKEN=$(jq -r .env.GITHUB_PERSONAL_ACCESS_TOKEN ~/.claude/settings.json)
 for r in home-ops home-labs; do curl -s -H "Authorization: Bearer $TOKEN" "https://api.github.com/repos/kichi-org/$r/actions/runners" | jq -r --arg r "$r" '"\($r): \(.total_count) runner(s)"'; done
 ```
+
 Expected: Kustomizations and pods gone within a few minutes; both repos report `0 runner(s)`. If a listener lingers because the HelmRelease uninstall hangs on the `AutoscalingRunnerSet` finalizer, `kubectl -n actions-runner-system delete autoscalingrunnerset --all` and re-check. The namespace object itself may remain (namespace.yaml prune) — harmless.
 
 ### Task 3: Enable ARC on the new cluster (merge `PR_V2`)
@@ -180,6 +188,7 @@ kubectl -n actions-runner-system get helmrelease,pods --no-headers | awk '{print
 kubectl -n actions-runner-system get secret home-ops-runner-secret -o jsonpath='{.data}' | jq 'keys'
 kubectl -n actions-runner-system get secret home-ops-runner home-labs-runner -o jsonpath='{range .items[*]}{.metadata.name}: {.type}{"\n"}{end}'
 ```
+
 Expected: HelmReleases `actions-runner-controller`, `home-ops-runner`, `home-labs-runner` Ready; pods `actions-runner-controller-*`, `home-ops-runner-*-listener`, `home-labs-runner-*-listener` Running; secret keys `github_app_id`, `github_app_installation_id`, `github_app_private_key`; the two Talos-issued secrets exist (type `Opaque`, created by Talos from the `talos.dev` ServiceAccounts).
 
 - [ ] **Step 2: Confirm GitHub sees the scale sets from the new cluster**
@@ -189,6 +198,7 @@ TOKEN=$(jq -r .env.GITHUB_PERSONAL_ACCESS_TOKEN ~/.claude/settings.json)
 for r in home-ops home-labs; do curl -s -H "Authorization: Bearer $TOKEN" "https://api.github.com/repos/kichi-org/$r/actions/runners" | jq -r --arg r "$r" '"\($r): \(.total_count) runner(s) \([.runners[].name] | join(","))"'; done
 kubectl -n actions-runner-system logs deploy/actions-runner-controller --since=10m | grep -ciE 'error' || true
 ```
+
 Expected: listener registration visible in the controller logs without errors (runner count stays 0 until a job runs — that's normal for `minRunners: 0`).
 
 ### Task 4: Smoke-test both runner sets with real workflows
@@ -206,6 +216,7 @@ kubectl -n actions-runner-system get pods --no-headers | grep -E 'home-ops-runne
 until [ "$(curl -s -H "Authorization: Bearer $TOKEN" 'https://api.github.com/repos/kichi-org/home-ops/actions/workflows/test.yaml/runs?per_page=1' | jq -r '.workflow_runs[0].status')" = "completed" ]; do sleep 15; done
 curl -s -H "Authorization: Bearer $TOKEN" 'https://api.github.com/repos/kichi-org/home-ops/actions/workflows/test.yaml/runs?per_page=1' | jq -r '.workflow_runs[0] | "\(.conclusion) \(.html_url)"'
 ```
+
 Expected: `dispatch=204`; an ephemeral `home-ops-runner-…-runner` pod appears on talos-11 (with a hostpath work PVC) and the run ends `success`.
 
 - [ ] **Step 2: Dispatch `tvb-postprocess` on home-labs in dry-run (`runs-on: home-labs-runner`, exercises the NFS mount)**
@@ -216,6 +227,7 @@ curl -s -o /dev/null -w 'dispatch=%{http_code}\n' -X POST -H "Authorization: Bea
 until [ "$(curl -s -H "Authorization: Bearer $TOKEN" 'https://api.github.com/repos/kichi-org/home-labs/actions/workflows/tvb-postprocess.yaml/runs?per_page=1' | jq -r '.workflow_runs[0].status')" = "completed" ]; do sleep 15; done
 curl -s -H "Authorization: Bearer $TOKEN" 'https://api.github.com/repos/kichi-org/home-labs/actions/workflows/tvb-postprocess.yaml/runs?per_page=1' | jq -r '.workflow_runs[0] | "\(.conclusion) \(.html_url)"'
 ```
+
 Expected: `dispatch=204`, run `success` (dry-run touches nothing on the NAS). If home-labs' default branch is not `main`, use `GET /repos/kichi-org/home-labs` → `.default_branch` for `ref`.
 
 - [ ] **Step 3: Confirm the ephemeral work PVCs are cleaned up**
@@ -224,6 +236,7 @@ Expected: `dispatch=204`, run `success` (dry-run touches nothing on the NAS). If
 cd ~/repo/kichi-org/home-ops-v2 && export PATH=$HOME/.local/share/mise/shims:$PATH KUBECONFIG=$PWD/kubeconfig
 sleep 60; kubectl -n actions-runner-system get pvc,pods --no-headers | awk '{print $1,$2,$3}'
 ```
+
 Expected: only the controller and the two listener pods; no leftover `*-work` PVCs (ARC deletes them with the runner pod).
 
 ### Task 5: Close out
@@ -245,4 +258,4 @@ Expected: only the controller and the two listener pods; no leftover `*-work` PV
 - Smoke runs: home-ops `Test` success https://github.com/kichi-org/home-ops/actions/runs/33314944387 ; home-labs `tvb-postprocess` dry-run success https://github.com/kichi-org/home-labs/actions/runs/33315010032 (NFS mount exercised)
 - Date completed: 2026-08-30
 
-Lesson for later cutovers: when removing an operator *and* its CRs from the old cluster in one PR, delete the CRs first (or keep the operator until the CRs are gone) so finalizers can run.
+Lesson for later cutovers: when removing an operator _and_ its CRs from the old cluster in one PR, delete the CRs first (or keep the operator until the CRs are gone) so finalizers can run.

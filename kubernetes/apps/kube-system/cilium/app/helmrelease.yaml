@@ -10,6 +10,8 @@ spec:
   interval: 1h
   values:
     autoDirectNodeRoutes: true
+    bgpControlPlane:
+      enabled: true
     bpf:
       masquerade: true
       # Ref: https://github.com/siderolabs/talos/issues/10002
@@ -21,8 +23,8 @@ spec:
       automount:
         enabled: false
       hostRoot: /sys/fs/cgroup
-    # NOTE: devices might need to be set if you have more than one active NIC on your hosts
-    # devices: eno+ eth+
+    # The stable bond name is defined in talos/all/20-network-links.yaml.tpl
+    devices: bond0+
     dashboards:
       enabled: true
     endpointRoutes:
@@ -41,11 +43,12 @@ spec:
     kubeProxyReplacement: true
     kubeProxyReplacementHealthzBindAddr: 0.0.0.0:10256
     l2announcements:
-      enabled: true
+      enabled: false
     loadBalancer:
       algorithm: maglev
       mode: "dsr"
-    localRedirectPolicy: true
+    localRedirectPolicies:
+      enabled: true
     operator:
       dashboards:
         enabled: true
@@ -84,4 +87,3 @@ spec:
           - SYS_RESOURCE
     socketLB:
       enabled: true
-      hostNamespaceOnly: true
