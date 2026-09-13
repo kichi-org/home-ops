@@ -3,6 +3,8 @@ apiVersion: barmancloud.cnpg.io/v1
 kind: ObjectStore
 metadata:
   name: r2
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   retentionPolicy: 7d
   configuration:
