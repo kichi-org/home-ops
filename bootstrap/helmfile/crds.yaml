@@ -24,6 +24,16 @@ releases:
     inherit:
       - template: default
 
+  - name: grafana
+    namespace: observability
+    inherit:
+      - template: default
+
+  - name: kopiur
+    namespace: kopiur-system
+    inherit:
+      - template: default
+
   - name: prometheus-operator-crds
     namespace: observability
     chart: oci://ghcr.io/prometheus-community/charts/prometheus-operator-crds
