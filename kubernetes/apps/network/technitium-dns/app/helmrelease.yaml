@@ -30,6 +30,8 @@ spec:
           secretKeyRef:
             name: &secret technitium-dns-secret
             key: EXTERNAL_DNS_RFC2136_TSIG_SECRET
+    extraArgs:
+      - --rfc2136-axfr
     triggerLoopOnEvent: true
     policy: sync
     sources:
