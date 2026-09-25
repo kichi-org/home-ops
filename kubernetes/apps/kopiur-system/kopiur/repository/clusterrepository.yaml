@@ -29,5 +29,22 @@ spec:
   identityDefaults:
     hostnameExpr: namespace
     usernameExpr: policyName
+  maintenance:
+    schedule:
+      full:
+        cron: 0 3 * * *
+        jitter: 1h
+      quick:
+        cron: 0 * * * *
+        jitter: 10m
+  moverDefaults:
+    cache:
+      capacity: 5Gi
+      contentCacheSizeMb: 512
+      metadataCacheSizeMb: 1024
+      mode: Persistent
+  parameters:
+    epoch:
+      minDuration: 1h
   scheduleDefaults:
     timezone: Asia/Singapore
