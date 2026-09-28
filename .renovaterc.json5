@@ -1,6 +1,9 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["github>home-operations/renovate-presets#8.1.0"],
+  extends: [
+    "github>home-operations/renovate-presets#8.1.0",
+    "github>home-operations/renovate-presets//apps/talosFactory.json5#8.1.0",
+  ],
   schedule: ["every weekend"],
   lockFileMaintenance: {
     enabled: true,
@@ -25,7 +28,7 @@
     {
       description: "Talos Group",
       groupName: "talos",
-      matchPackageNames: ["ghcr.io/siderolabs/installer", "siderolabs/talos", "talosctl"],
+      matchPackageNames: ["siderolabs/talos", "talosctl"],
       minimumGroupSize: 3,
     },
     {
