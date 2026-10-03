@@ -3,6 +3,7 @@
   extends: [
     "github>home-operations/renovate-presets#8.1.0",
     "github>home-operations/renovate-presets//apps/talosFactory.json5#8.1.0",
+    ":timezone(Asia/Kuala_Lumpur)",
   ],
   schedule: ["every weekend"],
   lockFileMaintenance: {
